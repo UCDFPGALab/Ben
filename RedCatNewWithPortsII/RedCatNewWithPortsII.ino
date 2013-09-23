@@ -178,7 +178,8 @@ void loop()
         //correct = false;
        // Print out the address and received data if bad data read
         if(correct == false)
-        { 
+        {
+          /* 
           Serial.print(correctData);
           Serial.print(" WAS READ AS ");
           Serial.println(dataInt);
@@ -189,8 +190,11 @@ void loop()
           Serial.print(addressInt);
           Serial.print("\\");
           Serial.println(toBinary(addressInt, 19));
+          */
           Serial.print("THIS IS ADDRESS ");
-          Serial.println(addressSteps); 
+          Serial.println(addressSteps);
+          Serial.println(toBinary(dataInt ^ correctData, 10));
+          Serial.println(" ");
          // If the read-back data is incorrect read the address more
          for(int i = 0; i < readsAfterFailure; i++)
          {
@@ -362,11 +366,11 @@ int readData(int address)
   //Serial.print("READ TEST: ");
   //Serial.println(toBinary(address, 19));
   digitalWrite(WR, HIGH);
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   REG_PIOC_ODSR = address;
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   digitalWrite(CS, LOW);
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   digitalWrite(OE, LOW);
   //delayMicroseconds(1);
   /*
@@ -384,7 +388,7 @@ int readData(int address)
     Serial.println(toBinary(data, 10));
   }
   */
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   //data = PIOD->PIO_PDSR;
   /*
   data = REG_PIOD_PDSR;
@@ -432,9 +436,9 @@ int readData(int address)
   */
   
   digitalWrite(OE, HIGH);
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   digitalWrite(CS, HIGH);
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   return data;
  }
 
@@ -442,9 +446,9 @@ int readData(int address)
 void writeData(int address, int data)
 {
   digitalWrite(OE, HIGH);
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   REG_PIOC_ODSR = address;
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   //REG_PIOD_ODSR = data;
   //REG_PIOD_ODSR = 0x0710;
    /*
@@ -478,15 +482,15 @@ void writeData(int address, int data)
   Serial.print("\n");
   */
   
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   digitalWrite(CS, LOW);
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   digitalWrite(WR, LOW);
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   digitalWrite(CS, HIGH);
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
   digitalWrite(WR, HIGH);
-  delayMicroseconds(1);
+  //delayMicroseconds(1);
 }
 
 String toBinary(unsigned int val, int length)
