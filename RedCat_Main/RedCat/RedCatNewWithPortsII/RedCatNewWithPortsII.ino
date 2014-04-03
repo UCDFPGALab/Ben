@@ -13,7 +13,7 @@ const char TERMINATION = '$';
 const int ADDRESS_MASK = 1022;
 const int DATA_MASK = 30;
 
-const byte DELAY_AFTER_ADDRESS = 5; //in milliseconds
+const byte DELAY_AFTER_ADDRESS = 5; //in microseconds
 const bool VERBOSE = true;
 
 typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS} states;
@@ -24,9 +24,6 @@ const char SET_CODES[] = {'a', 'b', 'c', 'd'};
 
 // Data and address integers
 int correctData = 170;
-int dataInt;
-
-double holdAmount = 0.1;
 
 int divider = 0;
 int numRuns = 1;           // Number of runs
@@ -71,6 +68,7 @@ void loop() {
   for(int run = 0; run < numRuns; run++) { //main loop for the tests    
     int addr = 0;
     long addressInt = 0;
+    int dataInt = 0;
     
     // Current behavior is read all addresses, then write all the addresses.
     // However, this can be changed to write and address, then read it right away, and so on.
@@ -84,17 +82,8 @@ void loop() {
     }
     
     for(addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
-        
       writeData(addressInt, correctData);
-       
-      // Strange addition is necessary to ensure that dedicated pins do not get set. In this case, pins 33 through 41 are being used and then pins 45 through 51. Thus, when the following situation is met:
-      // 0000000 0000 111111111 0 -> 0000001 0000 000000000 0 
-      if ((addressInt & ADDRESS_MASK) < (ADDRESS_MASK - 1)) {
-         addressInt = addressInt + 2;
-      }
-      else {
-        addressInt = addressInt + 3074;
-      }
+      incrementAddress(addressInt);
     }
     
     // Set pins to inputs
@@ -131,14 +120,8 @@ void loop() {
           // If the read-back data is incorrect reread n times, n = readsAfterFailure
           reread(addr, readsAfterFailure);
       }
-        
-      //increment the address
-      if((addressInt & ADDRESS_MASK) < (ADDRESS_MASK - 1)) {
-        addressInt = addressInt + 2;
-      }
-      else {
-        addressInt = addressInt + 3074;
-      }
+       
+      incrementAddress(addressInt);
     }
     
     if (VERBOSE) {
@@ -346,4 +329,13 @@ void reread(const long& address, const int& times) {
 }
 
 
-
+void incrementAddress(long& address){
+  // Strange addition is necessary to ensure that dedicated pins do not get set. In this case, pins 33 through 41 are being used and then pins 45 through 51. Thus, when the following situation is met:
+  // 0000000 0000 111111111 0 -> 0000001 0000 000000000 0 
+  if((address & ADDRESS_MASK) < (ADDRESS_MASK - 1)) {
+    address += 2;
+  }
+  else {
+    address += 3074;
+  }
+}
