@@ -30,7 +30,6 @@ long addressInt = 0;
 
 double holdAmount = 0.1;
 bool writing = true;
-bool correct = true;
 
 int divider = 0;
 int numRuns = 1;           // Number of runs 
@@ -44,7 +43,6 @@ int i = 0;
 void setup()
 {
   Serial.begin(115200);
-  //randomSeed(analogRead(5));
   establishContact();
   int mod = 0;
   // Set modes of IO
@@ -90,11 +88,11 @@ void loop()
     digitalWrite(LED, LOW);
   }
   
-  // Check to make sure the correct number of runs are being done
-  if(currentRun < numRuns) { // Loop through all addresses then stop
-    if(addressSteps < NUM_ADDRESSES) { // Write and then read
-      if(writing) {
-        if(addressSteps == 0) {
+  if(currentRun < numRuns) { // Check to make sure the correct number of runs are being done
+    if(addressSteps < NUM_ADDRESSES) { // Loop through all addresses then stop
+      if(writing) {  // Write and then read
+      
+        if(addressSteps == 0) { //starting write cycle
           //REG_PIOD_OWER = 0x3CF;
           // Set pins to outputs
           pinMode(11, OUTPUT);
@@ -114,11 +112,11 @@ void loop()
           addressInt = addressInt + 3074;
         }
         
-        addressSteps = addressSteps + 1;
+        ++addressSteps;
       }
       else {
-        // Reset all inputs to outputs
-        if(addressSteps == 0) {
+      
+        if(addressSteps == 0) { // Reset all inputs to outputs
           pinMode(11, INPUT);
           pinMode(12, INPUT);
           for(i = 25; i < 31; i++) {
@@ -126,20 +124,19 @@ void loop()
           }
         }
         // Used to see if output is consistent with initial input
-        correct = true;
-        
         dataInt = readData(addressInt);
         
         // Print out the address and received data if bad data read
         if(!check(correctData, dataInt)) {
+          
           if (VERBOSE){
-            Serial.print("Address: ");
+            Serial.print("Address:\t");
             Serial.println(addressSteps);
-            Serial.print("Correct data: ");
+            Serial.print("Correct data:\t");
             Serial.println(correctData);
-            Serial.print("Read data: ");
+            Serial.print("Read data:\t");
             Serial.println(dataInt);
-            Serial.print("XOR of the data: ");
+            Serial.print("XOR of the data:\t");
             Serial.println(toBinary(dataInt ^ correctData, 10));
             Serial.println();
           }
@@ -174,7 +171,14 @@ void loop()
         delay(delayAfterWrite);
       }
       else {
-        Serial.println("DONE\n");
+        
+        if (VERBOSE) {
+          Serial.println("Done with current run\n");
+        }
+        else {
+          Serial.println("--\n");
+        }
+        
         currentRun = currentRun + 1;
         writing = true;
         addressInt = 0;
@@ -182,8 +186,6 @@ void loop()
       }
     }
   }
-  
-  getData();
 }
 
 
@@ -363,7 +365,7 @@ void reread(const long& address, const int& times) {
     Serial.print("Read back: ");
     for(i = 0; i < times; i++){
       Serial.print(reads[i]);
-      Serial.print(" ");
+      Serial.print("\t");
     }
     Serial.println();
   }
