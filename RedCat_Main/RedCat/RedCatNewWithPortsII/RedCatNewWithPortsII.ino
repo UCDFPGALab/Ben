@@ -64,7 +64,7 @@ void loop() {
   establishContact();
   getData();
 
-  for(int run = 0; run < numRuns; run++) { //main loop for the tests    
+  for(int rn = 0; rn < numRuns; rn++) { //main loop for the tests    
     int addr = 0;
     long addressInt = 0;
     int dataInt = 0;
@@ -122,10 +122,13 @@ void loop() {
     }
     
     if (VERBOSE) {
-      Serial.println("Done with current run\n");
+      Serial.print("Done with run ");
+      Serial.print(rn+1);
+      Serial.print('/');
+      Serial.println(numRuns);
     }
     else {
-      Serial.println("--\n");
+      Serial.println("--");
     }
   }
   

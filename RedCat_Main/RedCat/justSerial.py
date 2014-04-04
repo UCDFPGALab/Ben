@@ -9,22 +9,6 @@ import random
 import time
 import datetime
 
-
-port = sys.argv[1];
-outputFile = open('data3.txt', 'w');
-
-try:
-    ser = serial.Serial(port, 115200, timeout=1)
-except IOError:
-    print port, ' CANNOT BE OPENED. TERMINATING SCRIPT';
-    sys.exit();
-
-aFile = open('logFile', 'w')
-holder = False
-WIDTH = 4.40
-LENGTH = 3.00
-
-
 def serialEvent(serialInput):
     global holder
     global initialized
@@ -87,8 +71,6 @@ def getNumberInput(message, minimum, maximum, floatFlag, characterCode):
             if minimum != maximum and (int(userInput) < minimum or int(userInput) > maximum):
                 raise ValueError
 
-
-
             # Appended to user input - a character code, the length of the string, and a termination character
             userInput = characterCode + userInput
 
@@ -148,23 +130,55 @@ def getStringInput(message):
     return userInput.upper()
 
 
+def is_number(s):
+  try:
+      float(s)
+      return True
+  except ValueError:
+      return False
+      
+def user_inputs():
+  holderString = "INPUT DATA VALUE: "
+  dataInt = getNumberInput(holderString, 0, 255, 0, 'A')
+
+  holderString = "INPUT NUMBER OF RUNS: "
+  getNumberInput(holderString, 0, 0, 0, 'B')
+
+  holderString = "INPUT RADIATION VALUE (pA): "
+  radiationDose = getNumberInput(holderString, 0, 0, 1, ' ')
+
+  holderString = "INPUT DELAY BETWEEN READ AND WRITE CYCLES (ms): "
+  getNumberInput(holderString, 0, 1000000, 1, 'C')
+
+  holderString = "INPUT NUMBER OF TIMES TO RE-READ ADDRESS AFTER FAILURE: "
+  getNumberInput(holderString, 0, 100, 1, 'D')
+  
+def send_inputs():
+  dataInt = getNumberInput(holderString, 0, 255, 0, 'A')
+  getNumberInput(holderString, 0, 0, 0, 'B')
+  radiationDose = getNumberInput(holderString, 0, 0, 1, ' ')
+  getNumberInput(holderString, 0, 1000000, 1, 'C')
+  getNumberInput(holderString, 0, 100, 1, 'D')
+    
+    
+    
+port = sys.argv[1];
+outputFile = open('data3.txt', 'w');
+
+try:
+  ser = serial.Serial(port, 115200, timeout=1)
+except IOError:
+  print port, ' CANNOT BE OPENED. TERMINATING SCRIPT';
+  sys.exit();
+
+aFile = open('logFile', 'w')
+holder = False
+WIDTH = 4.40
+LENGTH = 3.00
 
 serialEvent(ser)               
 
-holderString = "INPUT DATA VALUE: "
-dataInt = getNumberInput(holderString, 0, 255, 0, 'A')
-
-holderString = "INPUT NUMBER OF RUNS: "
-getNumberInput(holderString, 0, 0, 0, 'B')
-
-holderString = "INPUT RADIATION VALUE (pA): "
-radiationDose = getNumberInput(holderString, 0, 0, 1, ' ')
-
-holderString = "INPUT DELAY BETWEEN READ AND WRITE CYCLES (ms): "
-getNumberInput(holderString, 0, 1000000, 1, 'C')
-
-holderString = "INPUT NUMBER OF TIMES TO RE-READ ADDRESS AFTER FAILURE: "
-getNumberInput(holderString, 0, 100, 1, 'D')
+user_inputs();
 
 ser.write("$")
 ser.flushInput()
@@ -173,22 +187,14 @@ sys.stdout.write(ser.readline());
 ser.flushOutput()
 initTime = time.time()
 
-def is_number(s):
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
-
-while True:
+line = "    "
+        
+while (line != "$\n"):
     line = ser.readline()
     if len(line) > 0: #and is_number(line):
     	sys.stdout.write(line);
-    	sys.stdout.write('\n\n');
     outputFile.write(line);
     outputFile.write('\n');
-    if(line == "$\n"):
-      break
 
 ser.close()
 
