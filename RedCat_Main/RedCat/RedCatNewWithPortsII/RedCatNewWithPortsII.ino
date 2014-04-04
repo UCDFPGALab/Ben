@@ -4,7 +4,7 @@ const byte CS = 52; // Chip select
 const byte OE = 2; // Output enable''
 const byte WR = 53; // Write enable
 const byte LED = 22; // Testing LED
-float startTime;
+//float startTime;
 
 const unsigned int NUM_ADDRESSES = 64000;
 
@@ -13,7 +13,7 @@ const char TERMINATION = '$';
 const int ADDRESS_MASK = 1022;
 const int DATA_MASK = 30;
 
-const byte DELAY_AFTER_ADDRESS = 5; //in microseconds
+const byte DELAY_AFTER_ADDRESS = 10; //in microseconds, 10 is more than enough, but probably depends on cable setup
 const bool VERBOSE = true;
 
 typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS} states;
@@ -55,7 +55,6 @@ void setup()
       i = 44;
     }
   }
-
   //startTime  = micros();
 }
 
@@ -92,15 +91,13 @@ void loop() {
     for(i = 25; i < 31; i++) {
       pinMode(i, INPUT);
     }
+    addressInt = 0; //reset the address between our run and read cycles back to 0
     
     for(addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
-
-      // Used to see if output is consistent with initial input
       dataInt = readData(addressInt);
       
       // Print out the address and received data if bad data read
       if(!check(correctData, dataInt)) {
-        
         if (VERBOSE){
           Serial.print("Address:\t");
           Serial.println(addr);
@@ -110,17 +107,17 @@ void loop() {
           Serial.println(dataInt);
           Serial.print("XOR of the data:\t");
           Serial.println(toBinary(dataInt ^ correctData, 10));
+          //Serial.print("Time after start (microseconds):\t");
+          //Serial.println((micros()-startTime));
         }
         else {
           Serial.println(addr);
           Serial.println(correctData);
           Serial.println(dataInt);
         }
-
-          // If the read-back data is incorrect reread n times, n = readsAfterFailure
-          reread(addr, readsAfterFailure);
+        // If the read-back data is incorrect reread n times, n = readsAfterFailure
+        reread(addressInt, readsAfterFailure);
       }
-       
       incrementAddress(addressInt);
     }
     
@@ -130,8 +127,6 @@ void loop() {
     else {
       Serial.println("--\n");
     }
-    addressInt = 0;
-    addr = 0;
   }
   
   if (VERBOSE) {
@@ -140,7 +135,6 @@ void loop() {
   else {
     Serial.println("----\n");
   }
-  
 }
 
 
@@ -252,7 +246,7 @@ void establishContact() {
 int readData(const int& address) {
   int data = 0;
   int holder = 0;
-  
+
   REG_PIOC_ODSR = address;
   delayMicroseconds(DELAY_AFTER_ADDRESS); //necessary to wait for register to set
   
