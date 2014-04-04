@@ -149,9 +149,7 @@ def getStringInput(message):
 
 
 
-serialEvent(ser)
-
-               
+serialEvent(ser)               
 
 holderString = "INPUT DATA VALUE: "
 dataInt = getNumberInput(holderString, 0, 255, 0, 'A')
@@ -161,7 +159,6 @@ getNumberInput(holderString, 0, 0, 0, 'B')
 
 holderString = "INPUT RADIATION VALUE (pA): "
 radiationDose = getNumberInput(holderString, 0, 0, 1, ' ')
-
 
 holderString = "INPUT DELAY BETWEEN READ AND WRITE CYCLES (ms): "
 getNumberInput(holderString, 0, 1000000, 1, 'C')
@@ -176,56 +173,6 @@ sys.stdout.write(ser.readline());
 ser.flushOutput()
 initTime = time.time()
 
-
-##cycleFlag = 0 if cycling[0] == 'N' else cycleFlag = 1;
-
-
-##radRate = (radiationDose * pow(10, -12) / 4.39 / pow(10, -11))
-##radRate = 1
-##print radRate
-
-#initialTime = time.time();
-#totalDosage = list()
-#totalUpsets = 0
-#totalLatches = 0
-
-
-# Need to collect data and plot simultaneously - Utilize multiprocessing to accomplish this
-# by creating a separate graphing process
-#app = pg.mkQApp()
-#proc = mp.QtProcess()
-#remotepg = proc._import('pyqtgraph')
-##eventUpsets = 0
-##latches = 0
-##eventUpsetRate = proc.transfer([])
-##latchRate = proc.transfer([])
-
-#app = QtGui.QApplication([])
-#win = remotepg.GraphicsWindow(title="CHIP TESTER V0.0")
-#win.resize(1600,900)
-#win.setWindowTitle('Central Command')
-
-#p1 = win.addPlot(title = "Dose versus Time")
-#p2 = win.addPlot(title="Upset rate versus Integrated Dose")
-#p3 = win.addPlot(title = "Latch rate versus Integrated Dose")
-#win.nextRow()
-#p4 = win.addPlot(title = "Latch rate versus Current")
-#p5 = win.addPlot(title = "Latch rate versus Time")
-#p6 = win.addPlot(title = "Display of upsets")
-
-
-
-#superClock = time.mktime(time.gmtime())
-#initClock = superClock
-#currentTime = 0
-#latchRate = proc.transfer([]);
-#upsetRate = proc.transfer([]);
-#timing = proc.transfer([]);
-#currentDose = proc.transfer([]);
-#totalDose = proc.transfer([]);
-#upsetHolder = 0
-#latchHolder = 0
-
 def is_number(s):
     try:
         float(s)
@@ -234,51 +181,14 @@ def is_number(s):
         return False
 
 while True:
-#    sys.stdout.write('READING...\n');
     line = ser.readline()
     if len(line) > 0: #and is_number(line):
     	sys.stdout.write(line);
     	sys.stdout.write('\n\n');
-	outputFile.write(line);
-	outputFile.write('\n');
-    
-#
-#    currentTime = time.time()
-#
-#    if len(line) != 0:
-#        sys.stdout.write(line)
-#        #if "EC" in line:
-#        #    aFile.write(str(int(line[line.index("EC") + 2:]) - (currentTime - initTime)) + "\n")
-#        aFile.write(line)
-        #aFile.write("\n" + str(currentTime - initTime) + "\n")
-        
-        #if(line[1].isdigit()):
-        #    upsetHolder = upsetHolder + 1
-        #if(line[0].isdigit()):
-        #    latchHolder = latchHolder + 1
-#    if time.mktime(time.gmtime()) - superClock > 1:
-#        superClock = time.mktime(time.gmtime())
-#        latchRate.extend([latchHolder])
-#        upsetRate.extend([upsetHolder])
-#        timing.extend([(superClock - initClock)])
-#        currentDose.extend([radiationDose])
-#        totalDose.extend([sum(currentDose) + radiationDose])
-#        upsetHolder = 0
-#        latchHolder = 0
-#        #p1.setData(x=timing, y=rate, _callSync='off')
-#        p1.plot(timing, totalDose, pen=(200,200,200), symbolBrush=(255,0,0))
-#        p2.plot(totalDose, upsetRate, pen=(200,200,200), symbolBrush=(255,0,0))
-#        p3.plot(totalDose, latchRate, pen=(200,200,200), symbolBrush=(255,0,0))
-##        if line[len(line) - 1] == 'U':
-##            totalUsets = totalUpsets + 1
-##        elif line[len(line) - 1] == 'L':
-##            totalLatches = totalLatches + 1
-##        else:
-##            sys.stdout.write("SOMETHING WENT WRONG\n")
-        
-        
-
-
+    outputFile.write(line);
+    outputFile.write('\n');
+    if(line == "$\n"):
+      break
 
 ser.close()
 

@@ -36,7 +36,6 @@ int i = 0;
 void setup()
 {
   Serial.begin(115200);
-  establishContact();
   // Set modes of IO
   pinMode(CS, OUTPUT);
   pinMode(OE,OUTPUT);
@@ -63,6 +62,7 @@ void setup()
 
 
 void loop() {
+  establishContact();
   getData();
 
   for(int run = 0; run < numRuns; run++) { //main loop for the tests    
@@ -309,7 +309,7 @@ void reread(const long& address, const int& times) {
   for(i = 0; i < times; i++) {
     reads[i] = readData(address);
     if(!check(correctData, reads[i])) {
-      netFalseReads = netFalseReads + 1;
+      netFalseReads++;
     }
   }
   
