@@ -13,7 +13,7 @@ const char TERMINATION = '$';
 const int ADDRESS_MASK = 1022;
 const int DATA_MASK = 30;
 
-const byte DELAY_AFTER_ADDRESS = 10; //in microseconds, 10 is more than enough, but probably depends on cable setup
+const byte DELAY_AFTER_ADDRESS = 300; //in microseconds, 10 is more than enough, but probably depends on cable setup
 const bool VERBOSE = true;
 
 typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS} states;
@@ -23,7 +23,7 @@ byte output1, output2, output3;
 const char SET_CODES[] = {'a', 'b', 'c', 'd'};
 
 // Data and address integers
-int correctData = 170;
+unsigned int correctData = 170;
 
 int divider = 0;
 int numRuns = 1;           // Number of runs
@@ -66,8 +66,8 @@ void loop() {
 
   for(int rn = 0; rn < numRuns; rn++) { //main loop for the tests    
     int addr = 0;
-    long addressInt = 0;
-    int dataInt = 0;
+    unsigned long addressInt = 0;
+    unsigned int dataInt = 0;
     
     // Current behavior is read all addresses, then write all the addresses.
     // However, this can be changed to write and address, then read it right away, and so on.
@@ -81,6 +81,7 @@ void loop() {
     }
     
     for(addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
+      correctData = messedData(addr%256);
       writeData(addressInt, correctData);
       incrementAddress(addressInt);
     }
@@ -94,10 +95,11 @@ void loop() {
     addressInt = 0; //reset the address between our run and read cycles back to 0
     
     for(addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
+      correctData = messedData(addr%256);
       dataInt = readData(addressInt);
       
       // Print out the address and received data if bad data read
-      if(!check(correctData, dataInt)) {
+      if(correctData != dataInt) {
         if (VERBOSE){
           Serial.print("Address:\t");
           Serial.println(addr);
@@ -142,13 +144,6 @@ void loop() {
 
 
 
-// Checks that the data is correct by comparing the two data arrays
-bool check(const int& oldData, const int& data) {
-  return (oldData == data);
-}
-
-
-
 void getData() {
   int mod = 0;
   bool done = false;
@@ -158,11 +153,7 @@ void getData() {
     }
   }
   
-  // Using PD0 through PD9 without PD4 and PD5. Thus, need to split the data at PD4 and PD5; 
-  mod = correctData & 15; // Get the last 4 digits
-  correctData >>= 4;  // Bit shift up to where 0's should start
-  correctData <<= 6;  // Add the two extra zeros
-  correctData += mod; // Re-add mod
+  correctData = messedData(correctData);
 }
 
 
@@ -246,27 +237,28 @@ void establishContact() {
 
  
 // Read a byte of data given an address and an array of data
-int readData(const int& address) {
+unsigned int readData(const unsigned long& address) {
   int data = 0;
   int holder = 0;
-
+  
   REG_PIOC_ODSR = address;
-  delayMicroseconds(DELAY_AFTER_ADDRESS); //necessary to wait for register to set
+  REG_PIOC_ODSR = address;
+ // delayMicroseconds(DELAY_AFTER_ADDRESS); //necessary to wait for register to set
   
   digitalWrite(CS, LOW);
   digitalWrite(OE, LOW);
   
   data = (PIOD->PIO_PDSR & (0b1111 << 6)) + (PIOD->PIO_PDSR & 0b1111);
-  
+ 
   digitalWrite(OE, HIGH);
   digitalWrite(CS, HIGH);
   return data;
- }
+}
 
  
  
 // Write a byte of data
-void writeData(const int& address, const int& data) {
+void writeData(const unsigned long& address, const unsigned int& data) {
   REG_PIOC_ODSR = address;
   REG_PIOD_ODSR = data;
   
@@ -279,7 +271,7 @@ void writeData(const int& address, const int& data) {
 
 
 
-String toBinary(const unsigned int& val, const int& length) { 
+String toBinary(const unsigned int& val, const unsigned int& length) { 
   String holder = "";
   unsigned int mask = 1 << length - 1;
   
@@ -305,7 +297,7 @@ void reread(const long& address, const int& times) {
   
   for(i = 0; i < times; i++) {
     reads[i] = readData(address);
-    if(!check(correctData, reads[i])) {
+    if(correctData != reads[i]) {
       netFalseReads++;
     }
   }
@@ -326,7 +318,7 @@ void reread(const long& address, const int& times) {
 }
 
 
-void incrementAddress(long& address){
+void incrementAddress(unsigned long& address){
   // Strange addition is necessary to ensure that dedicated pins do not get set. In this case, pins 33 through 41 are being used and then pins 45 through 51. Thus, when the following situation is met:
   // 0000000 0000 111111111 0 -> 0000001 0000 000000000 0 
   if((address & ADDRESS_MASK) < (ADDRESS_MASK - 1)) {
@@ -335,4 +327,16 @@ void incrementAddress(long& address){
   else {
     address += 3074;
   }
+}
+
+unsigned int messedData(const unsigned int& data){
+  unsigned int mod;
+  unsigned int ret;
+  ret = data;
+  // Using PD0 through PD9 without PD4 and PD5. Thus, need to split the data at PD4 and PD5; 
+  mod = ret & 15; // Get the last 4 digits
+  ret >>= 4;  // Bit shift up to where 0's should start
+  ret <<= 6;  // Add the two extra zeros
+  ret += mod; // Re-add mod
+  return ret;
 }

@@ -54,62 +54,61 @@ def waitForConfirmation(confirmationDelay):
 #                      D = number of times to re-read address after failure
 #                      (space) = no character code - only PC needs to know value                    
 def getNumberInput(message, minimum, maximum, floatFlag, characterCode):
-    validInput = False
-    ser.flush()
-    ser.flushInput()
-    ser.flushOutput()
-    keepSending = True;
-    confirmationDelay = 1
-    while validInput == False:
-        userInput = raw_input(message)        
-	try:
-            if floatFlag == 0:
-                int(userInput)
-            else:
-                float(userInput)
-                
-            if minimum != maximum and (int(userInput) < minimum or int(userInput) > maximum):
-                raise ValueError
+  validInput = False
+  ser.flush()
+  ser.flushInput()
+  ser.flushOutput()
+  keepSending = True;
+  confirmationDelay = 1
+  while (validInput == False):
+    userInput = raw_input(message)        
+    try:
+      if floatFlag == 0:
+          int(userInput)
+      else:
+          float(userInput)
+          
+      if minimum != maximum and (int(userInput) < minimum or int(userInput) > maximum):
+          raise ValueError
 
-            # Appended to user input - a character code, the length of the string, and a termination character
-            userInput = characterCode + userInput
+      # Appended to user input - a character code, the length of the string, and a termination character
+      userInput = characterCode + userInput
 
+      ser.write(str(userInput))
+      # Keep resending user-input data until confirmation or time-out
+      while(keepSending):
+        if confirmationDelay > 3000:
+            sys.stdout.write("COULD NOT CONFIRM WITH ARDUINO - ASSUME DEFAULT VALUE USED\n")
+            keepSending = False;
+        else:
+            confirmationDelay = 2 * confirmationDelay
+
+        if characterCode != ' ' and not(waitForConfirmation(confirmationDelay)):
+            ser.flush()
+            ser.flushInput()
+            ser.flushOutput()
             ser.write(str(userInput))
-            # Keep resending user-input data until confirmation or time-out
-            while(keepSending):
-                if confirmationDelay > 3000:
-                    sys.stdout.write("COULD NOT CONFIRM WITH ARDUINO - ASSUME DEFAULT VALUE USED\n")
-                    keepSending = False;
-                else:
-                    confirmationDelay = 2 * confirmationDelay
-
-                if characterCode != ' ' and not(waitForConfirmation(confirmationDelay)):
-                    ser.flush()
-                    ser.flushInput()
-                    ser.flushOutput()
-                    ser.write(str(userInput))
-                else:
-                    if characterCode != ' ':
-                        sys.stdout.write("SET VALUE ON ARDUINO\n")
-                    else:
-                        sys.stdout.write("SET VALUE LOCALLY\n")
-                    keepSending = False;
-
-            validInput = True
-        except ValueError:
-            sys.stdout.write("BAD INPUT\n")
-
-
-    if len(userInput) < 3:
-        if floatFlag == 0:
-            return int(userInput[1])
         else:
-            return float(userInput[1])
-    else:
-        if floatFlag == 0:
-            return int(userInput[1:len(userInput) - 1])
-        else:
-            return float(userInput[1:len(userInput) - 1])
+            if characterCode != ' ':
+                sys.stdout.write("SET VALUE ON ARDUINO\n")
+            else:
+                sys.stdout.write("SET VALUE LOCALLY\n")
+            keepSending = False;
+
+      validInput = True
+    except ValueError:
+        sys.stdout.write("BAD INPUT\n")
+
+  if len(userInput) < 3:
+      if floatFlag == 0:
+          return int(userInput[1])
+      else:
+          return float(userInput[1])
+  else:
+      if floatFlag == 0:
+          return int(userInput[1:len(userInput) - 1])
+      else:
+          return float(userInput[1:len(userInput) - 1])
 
             
 
