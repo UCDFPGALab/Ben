@@ -97,6 +97,7 @@ void loop() {
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
       correctData = messedData(addr % 256);
       dataInt = readData(addressInt);
+      dataInt = readData(addressInt);
 
       // Print out the address and received data if bad data read
       if (correctData != dataInt) {
@@ -245,7 +246,6 @@ int readData(const long& address) {
   digitalWrite(CS, HIGH);
 
   REG_PIOC_ODSR = address;
-  delayMicroseconds(DELAY_AFTER_ADDRESS); //necessary to wait for register to set
 
   digitalWrite(CS, LOW);
   digitalWrite(OE, LOW);
