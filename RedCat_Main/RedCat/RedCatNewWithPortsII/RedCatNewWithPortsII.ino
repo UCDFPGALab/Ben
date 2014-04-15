@@ -14,7 +14,7 @@ const int ADDRESS_MASK = 1022;
 const int DATA_MASK = 30;
 
 const byte DELAY_AFTER_ADDRESS = 0; //in microseconds, 10 is more than enough, but probably depends on cable setup
-const bool VERBOSE = false;
+const bool VERBOSE = true;
 
 typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS} states;
 states currentState = NONE;
@@ -97,11 +97,16 @@ void loop() {
       pinMode(i, INPUT);
     }
     addressInt = 0; //reset the address between our run and read cycles back to 0
+    
+    digitalWrite(CS, LOW);
+    digitalWrite(OE, LOW);
 
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
       correctData = messedData(addr%256);
-      readData(addressInt);
-      dataInt = readData(addressInt);
+      //readData(addressInt);
+      //dataInt = readData(addressInt);
+      
+      dataInt = readDataAddr(addressInt);
 
       // Print out the address and received data if bad data read
       if (correctData != dataInt) {
@@ -123,10 +128,14 @@ void loop() {
           Serial.println(dataInt);
         }
         // If the read-back data is incorrect reread n times, n = readsAfterFailure
-        reread(addressInt, readsAfterFailure);
+        //reread(addressInt, readsAfterFailure);
+        rereadAddr(addressInt, readsAfterFailure);
       }
       incrementAddress(addressInt);
     }
+    
+    digitalWrite(OE, HIGH);
+    digitalWrite(CS, HIGH);
 
     if (VERBOSE) {
       Serial.print("Done with run ");
@@ -244,7 +253,6 @@ void establishContact() {
 // Read a byte of data given an address and an array of data
 int readData(const long& address) {
   int data = 0;
-  int holder = 0;
   
   digitalWrite(CS, HIGH);
   digitalWrite(OE, HIGH);
@@ -259,6 +267,19 @@ int readData(const long& address) {
   digitalWrite(OE, HIGH);
   digitalWrite(CS, HIGH);
   return data;
+}
+
+
+
+// Read a byte of data given an address and an array of data
+int readDataAddr(const long& address) {
+  //function assumes that OE and CS have already been drawn low
+
+  REG_PIOC_ODSR = address;
+
+  delayMicroseconds(10);
+
+  return (REG_PIOD_PDSR & 0b01111001111);
 }
 
 
@@ -323,10 +344,38 @@ void reread(const long& address, const int& times) {
     Serial.println();
   }
   else {
-   // Serial.println(netFalseReads + 1);
+    Serial.println(netFalseReads + 1);
   }
 }
 
+
+
+void rereadAddr(const long& address, const int& times) {
+  // If the read-back data is incorrect read the address more
+  int reads[times];
+  int netFalseReads = 0;
+
+  for (i = 0; i < times; i++) {
+    reads[i] = readDataAddr(address);
+    if (correctData != reads[i]) {
+      netFalseReads++;
+    }
+  }
+
+  if (VERBOSE) {
+    Serial.print("Total number of invalid reads: ");
+    Serial.println(netFalseReads + 1);
+    Serial.print("Read back: ");
+    for (i = 0; i < times; i++) {
+      Serial.print(reads[i]);
+      Serial.print("\t");
+    }
+    Serial.println();
+  }
+  else {
+    Serial.println(netFalseReads + 1);
+  }
+}
 
 void incrementAddress( long& address) {
   // Strange addition is necessary to ensure that dedicated pins do not get set. In this case, pins 33 through 41 are being used and then pins 45 through 51. Thus, when the following situation is met:
