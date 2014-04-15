@@ -33,131 +33,6 @@ int readsAfterFailure = 5; // Number of reads if there is a bad read
 
 int i = 0;
 
-void setup()
-{
-  Serial.begin(115200);
-  // Set modes of IO
-  pinMode(CS, OUTPUT);
-  pinMode(OE, OUTPUT);
-  pinMode(WR, OUTPUT);
-  pinMode(LED, OUTPUT);
-
-  digitalWrite(LED, HIGH);
-  digitalWrite(OE, HIGH);
-  digitalWrite(CS, HIGH);
-  digitalWrite(WR, HIGH);
-  //These pins are to be set high after all operations to reduce safeguard overhead
-
-  // Address pins
-  for (i = 33; i < 52; i++) {
-    pinMode(i, OUTPUT);
-    if (i == 41) {
-      i = 44;
-    }
-  }
-  //startTime = micros();
-  REG_PIOD_WPMR = 0x50494F0;
-  REG_PIOD_OWER = 0b1111111111;
-  REG_PIOD_IFER = 0b1111111111;
-  
-}
-
-
-
-void loop() {
-  establishContact();
-  getData();
-
-  for (int rn = 0; rn < numRuns; rn++) { //main loop for the tests
-    int addr = 0;
-    long addressInt = 0;
-    int dataInt = 0;
-
-    // Current behavior is read all addresses, then write all the addresses.
-    // However, this can be changed to write and address, then read it right away, and so on.
-
-    // REG_PIOD_OWER = 0x3CF;
-    // Set pins to outputs
-    pinMode(11, OUTPUT);
-    pinMode(12, OUTPUT);
-    for (i = 25; i < 31; i++) {
-      pinMode(i, OUTPUT);
-    }
-
-    for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
-      correctData = messedData(addr%256);
-      writeData(addressInt, correctData);
-      incrementAddress(addressInt);
-    }
-
-    // Set pins to inputs
-    pinMode(11, INPUT);
-    pinMode(12, INPUT);
-    for (i = 25; i < 31; i++) {
-      pinMode(i, INPUT);
-    }
-    addressInt = 0; //reset the address between our run and read cycles back to 0
-    
-    digitalWrite(CS, LOW);
-    digitalWrite(OE, LOW);
-
-    for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
-      correctData = messedData(addr%256);
-      //readData(addressInt);
-      //dataInt = readData(addressInt);
-//      readDataAddr(addressInt);
-      dataInt = readDataAddr(addressInt);
-
-      // Print out the address and received data if bad data read
-      if (correctData != dataInt) {
-        if (VERBOSE) {
-          Serial.print("\nAddress:\t");
-          Serial.println(addr);
-          Serial.print("Correct data:\t");
-          Serial.println(correctData);
-          Serial.print("Read data:\t");
-          Serial.println(dataInt);
-          Serial.print("Difference of the data:\t");
-          Serial.println(correctData - dataInt); //toBinary(dataInt ^ correctData, 10)
-          //Serial.print("Time after start (microseconds):\t");
-          //Serial.println((micros()-startTime));
-        }
-        else {
-          Serial.println(addr);
-          Serial.println(correctData);
-          Serial.println(dataInt);
-        }
-        // If the read-back data is incorrect reread n times, n = readsAfterFailure
-        //reread(addressInt, readsAfterFailure);
-        rereadAddr(addressInt, readsAfterFailure);
-      }
-      incrementAddress(addressInt);
-    }
-    
-    digitalWrite(OE, HIGH);
-    digitalWrite(CS, HIGH);
-
-    if (VERBOSE) {
-      Serial.print("Done with run ");
-      Serial.print(rn + 1);
-      Serial.print('/');
-      Serial.println(numRuns);
-    }
-    else {
-      Serial.println("--");
-    }
-  }
-
-  if (VERBOSE) {
-    Serial.println("Done with all runs, ready for more data\n");
-  }
-  else {
-    Serial.println("----\n");
-  }
-}
-
-
-
 void getData() {
   int mod = 0;
   bool done = false;
@@ -277,7 +152,7 @@ int readDataAddr(const long& address) {
 
   REG_PIOC_ODSR = address;
 
-  delayMicroseconds(4);
+  delayMicroseconds(5);
 
   return (REG_PIOD_PDSR & 0b01111001111);
 }
@@ -289,12 +164,12 @@ void writeData(const long& address, const int& data) {
   REG_PIOC_ODSR = address;
   REG_PIOD_ODSR = data;
 
-  delayMicroseconds(40);
+  delayMicroseconds(5);
 
   digitalWrite(CS, LOW);
   digitalWrite(WR, LOW);
 
-  delayMicroseconds(40);
+  delayMicroseconds(5);
   
   digitalWrite(CS, HIGH);
   digitalWrite(WR, HIGH);
@@ -321,13 +196,13 @@ String toBinary(const int& val, const int& length) {
 
 
 
-void reread(const long& address, const int& times) {
+void reread(const long& address, const int& times, int (*fread)(const long&)) {
   // If the read-back data is incorrect read the address more
   int reads[times];
   int netFalseReads = 0;
 
   for (i = 0; i < times; i++) {
-    reads[i] = readData(address);
+    reads[i] = (*fread)(address);
     if (correctData != reads[i]) {
       netFalseReads++;
     }
@@ -349,35 +224,7 @@ void reread(const long& address, const int& times) {
 }
 
 
-
-void rereadAddr(const long& address, const int& times) {
-  // If the read-back data is incorrect read the address more
-  int reads[times];
-  int netFalseReads = 0;
-
-  for (i = 0; i < times; i++) {
-    reads[i] = readDataAddr(address);
-    if (correctData != reads[i]) {
-      netFalseReads++;
-    }
-  }
-
-  if (VERBOSE) {
-    Serial.print("Total number of invalid reads: ");
-    Serial.println(netFalseReads + 1);
-    Serial.print("Read back: ");
-    for (i = 0; i < times; i++) {
-      Serial.print(reads[i]);
-      Serial.print("\t");
-    }
-    Serial.println();
-  }
-  else {
-    Serial.println(netFalseReads + 1);
-  }
-}
-
-void incrementAddress( long& address) {
+void incrementAddress(long& address) {
   // Strange addition is necessary to ensure that dedicated pins do not get set. In this case, pins 33 through 41 are being used and then pins 45 through 51. Thus, when the following situation is met:
   // 0000000 0000 111111111 0 -> 0000001 0000 000000000 0
   if ((address & ADDRESS_MASK) < (ADDRESS_MASK - 1)) {
@@ -398,4 +245,126 @@ int messedData(const int& data) {
   ret <<= 6; // Add the two extra zeros
   ret += mod; // Re-add mod
   return ret;
+}
+
+
+void setup()
+{
+  Serial.begin(115200);
+  // Set modes of IO
+  pinMode(CS, OUTPUT);
+  pinMode(OE, OUTPUT);
+  pinMode(WR, OUTPUT);
+  pinMode(LED, OUTPUT);
+
+  digitalWrite(LED, HIGH);
+  digitalWrite(OE, HIGH);
+  digitalWrite(CS, HIGH);
+  digitalWrite(WR, HIGH);
+  //These pins are to be set high after all operations to reduce safeguard overhead
+
+  // Address pins
+  for (i = 33; i < 52; i++) {
+    pinMode(i, OUTPUT);
+    if (i == 41) {
+      i = 44;
+    }
+  }
+  //startTime = micros();
+  REG_PIOD_WPMR = 0x50494F0;
+  REG_PIOD_OWER = 0b1111111111;
+  REG_PIOD_IFER = 0b1111111111;
+  
+}
+
+
+
+void loop() {
+  establishContact();
+  getData();
+
+  for (int rn = 0; rn < numRuns; rn++) { //main loop for the tests
+    int addr = 0;
+    long addressInt = 0;
+    int dataInt = 0;
+
+    // Current behavior is read all addresses, then write all the addresses.
+    // However, this can be changed to write and address, then read it right away, and so on.
+
+    // REG_PIOD_OWER = 0x3CF;
+    // Set pins to outputs
+    pinMode(11, OUTPUT);
+    pinMode(12, OUTPUT);
+    for (i = 25; i < 31; i++) {
+      pinMode(i, OUTPUT);
+    }
+
+    for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
+      correctData = messedData(addr%256);
+      writeData(addressInt, correctData);
+      incrementAddress(addressInt);
+    }
+
+    // Set pins to inputs
+    pinMode(11, INPUT);
+    pinMode(12, INPUT);
+    for (i = 25; i < 31; i++) {
+      pinMode(i, INPUT);
+    }
+    addressInt = 0; //reset the address between our run and read cycles back to 0
+    
+    //Bring the necessary pins down for the read cycle
+    digitalWrite(CS, LOW);
+    digitalWrite(OE, LOW);
+
+    for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
+      correctData = messedData(addr%256);
+      dataInt = readDataAddr(addressInt);
+
+      // Print out the address and received data if bad data read
+      if (correctData != dataInt) {
+        if (VERBOSE) {
+          Serial.print("\nAddress:\t");
+          Serial.println(addr);
+          Serial.print("Correct data:\t");
+          Serial.println(correctData);
+          Serial.print("Read data:\t");
+          Serial.println(dataInt);
+          Serial.print("Difference of the data:\t");
+          Serial.println(correctData - dataInt); //toBinary(dataInt ^ correctData, 10)
+          //Serial.print("Time after start (microseconds):\t");
+          //Serial.println((micros()-startTime));
+        }
+        else {
+          Serial.println(addr);
+          Serial.println(correctData);
+          Serial.println(dataInt);
+        }
+        // If the read-back data is incorrect reread n times, n = readsAfterFailure
+        reread(addressInt, readsAfterFailure, readDataAddr);
+      }
+      incrementAddress(addressInt);
+    }
+    
+    //Bring the necessary pins up at the end of the read cycle
+    digitalWrite(OE, HIGH);
+    digitalWrite(CS, HIGH);
+
+    if (VERBOSE) {
+      Serial.print("Done with run ");
+      Serial.print(rn + 1);
+      Serial.print('/');
+      Serial.println(numRuns);
+    }
+    else {
+      Serial.println("--");
+    }
+  }
+
+  if (VERBOSE) {
+    Serial.println("Done with all runs, ready for more data\n");
+  }
+  else {
+    Serial.println("----\n");
+  }
 }
