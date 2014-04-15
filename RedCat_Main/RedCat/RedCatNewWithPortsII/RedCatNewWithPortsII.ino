@@ -14,7 +14,7 @@ const int ADDRESS_MASK = 1022;
 const int DATA_MASK = 30;
 
 const byte DELAY_AFTER_ADDRESS = 0; //in microseconds, 10 is more than enough, but probably depends on cable setup
-const bool VERBOSE = true;
+const bool VERBOSE = false;
 
 typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS} states;
 states currentState = NONE;
@@ -100,6 +100,7 @@ void loop() {
 
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
       correctData = messedData(addr%256);
+      readData(addressInt);
       dataInt = readData(addressInt);
 
       // Print out the address and received data if bad data read
@@ -249,16 +250,11 @@ int readData(const long& address) {
   digitalWrite(OE, HIGH);
 
   REG_PIOC_ODSR = address;
-  delayMicroseconds(8000);
 
   digitalWrite(CS, LOW);
   digitalWrite(OE, LOW);
-  
-  delayMicroseconds(40);
 
   data = REG_PIOD_PDSR & 0b01111001111;
-  
-  delayMicroseconds(40);
 
   digitalWrite(OE, HIGH);
   digitalWrite(CS, HIGH);
@@ -327,7 +323,7 @@ void reread(const long& address, const int& times) {
     Serial.println();
   }
   else {
-    Serial.println(netFalseReads + 1);
+   // Serial.println(netFalseReads + 1);
   }
 }
 
