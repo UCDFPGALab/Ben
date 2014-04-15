@@ -13,7 +13,7 @@ const char TERMINATION = '$';
 const int ADDRESS_MASK = 1022;
 const int DATA_MASK = 30;
 
-const byte DELAY_AFTER_ADDRESS = 20; //in microseconds, 10 is more than enough, but probably depends on cable setup
+const byte DELAY_AFTER_ADDRESS = 0; //in microseconds, 10 is more than enough, but probably depends on cable setup
 const bool VERBOSE = true;
 
 typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS} states;
@@ -56,6 +56,10 @@ void setup()
     }
   }
   //startTime = micros();
+  REG_PIOD_WPMR = 0x50494F0;
+  REG_PIOD_OWER = 0b1111111111;
+  REG_PIOD_IFER = 0b1111111111;
+  
 }
 
 
@@ -81,7 +85,7 @@ void loop() {
     }
 
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
-      correctData = messedData(addr % 256);
+      correctData = messedData(addr%256);
       writeData(addressInt, correctData);
       incrementAddress(addressInt);
     }
@@ -95,19 +99,19 @@ void loop() {
     addressInt = 0; //reset the address between our run and read cycles back to 0
 
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
-      correctData = messedData(addr % 256);
+      correctData = messedData(addr%256);
       dataInt = readData(addressInt);
 
       // Print out the address and received data if bad data read
       if (correctData != dataInt) {
         if (VERBOSE) {
-          Serial.print("Address:\t");
+          Serial.print("\nAddress:\t");
           Serial.println(addr);
           Serial.print("Correct data:\t");
           Serial.println(correctData);
           Serial.print("Read data:\t");
           Serial.println(dataInt);
-          Serial.print("XOR of the data:\t");
+          Serial.print("Difference of the data:\t");
           Serial.println(correctData - dataInt); //toBinary(dataInt ^ correctData, 10)
           //Serial.print("Time after start (microseconds):\t");
           //Serial.println((micros()-startTime));
@@ -241,16 +245,20 @@ int readData(const long& address) {
   int data = 0;
   int holder = 0;
   
-  digitalWrite(OE, HIGH);
   digitalWrite(CS, HIGH);
+  digitalWrite(OE, HIGH);
 
   REG_PIOC_ODSR = address;
-  delayMicroseconds(DELAY_AFTER_ADDRESS); //necessary to wait for register to set
+  delayMicroseconds(8000);
 
   digitalWrite(CS, LOW);
   digitalWrite(OE, LOW);
+  
+  delayMicroseconds(40);
 
-  data = (PIOD->PIO_PDSR & (0b1111 << 6)) + (PIOD->PIO_PDSR & 0b1111);
+  data = REG_PIOD_PDSR & 0b01111001111;
+  
+  delayMicroseconds(40);
 
   digitalWrite(OE, HIGH);
   digitalWrite(CS, HIGH);
@@ -264,9 +272,13 @@ void writeData(const long& address, const int& data) {
   REG_PIOC_ODSR = address;
   REG_PIOD_ODSR = data;
 
+  delayMicroseconds(40);
+
   digitalWrite(CS, LOW);
   digitalWrite(WR, LOW);
 
+  delayMicroseconds(40);
+  
   digitalWrite(CS, HIGH);
   digitalWrite(WR, HIGH);
 }
