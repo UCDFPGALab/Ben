@@ -105,7 +105,7 @@ void loop() {
       correctData = messedData(addr%256);
       //readData(addressInt);
       //dataInt = readData(addressInt);
-      readDataAddr(addressInt);
+//      readDataAddr(addressInt);
       dataInt = readDataAddr(addressInt);
 
       // Print out the address and received data if bad data read
@@ -277,7 +277,7 @@ int readDataAddr(const long& address) {
 
   REG_PIOC_ODSR = address;
 
-  delayMicroseconds(2);
+  delayMicroseconds(3);
 
   return (REG_PIOD_PDSR & 0b01111001111);
 }
