@@ -277,7 +277,7 @@ int readDataAddr(const long& address) {
 
   REG_PIOC_ODSR = address;
 
-  delayMicroseconds(3);
+  delayMicroseconds(4);
 
   return (REG_PIOD_PDSR & 0b01111001111);
 }
