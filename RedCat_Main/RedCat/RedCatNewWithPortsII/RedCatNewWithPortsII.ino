@@ -200,8 +200,10 @@ void reread(const long& address, const int& times, int (*fread)(const long&)) {
   // If the read-back data is incorrect read the address more
   int reads[times];
   int netFalseReads = 0;
+  long resetaddr = incrementAddress(address);
 
   for (i = 0; i < times; i++) {
+    (*fread)(resetaddr);
     reads[i] = (*fread)(address);
     if (correctData != reads[i]) {
       netFalseReads++;
@@ -224,14 +226,14 @@ void reread(const long& address, const int& times, int (*fread)(const long&)) {
 }
 
 
-void incrementAddress(long& address) {
+long incrementAddress(const long& address) {
   // Strange addition is necessary to ensure that dedicated pins do not get set. In this case, pins 33 through 41 are being used and then pins 45 through 51. Thus, when the following situation is met:
   // 0000000 0000 111111111 0 -> 0000001 0000 000000000 0
   if ((address & ADDRESS_MASK) < (ADDRESS_MASK - 1)) {
-    address += 2;
+    return (address + 2);
   }
   else {
-    address += 3074;
+    return (address + 3074);
   }
 }
 
@@ -302,7 +304,7 @@ void loop() {
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
       correctData = messedData(addr%256);
       writeData(addressInt, correctData);
-      incrementAddress(addressInt);
+      addressInt = incrementAddress(addressInt);
     }
 
     // Set pins to inputs
@@ -343,7 +345,7 @@ void loop() {
         // If the read-back data is incorrect reread n times, n = readsAfterFailure
         reread(addressInt, readsAfterFailure, readDataAddr);
       }
-      incrementAddress(addressInt);
+      addressInt = incrementAddress(addressInt);
     }
     
     //Bring the necessary pins up at the end of the read cycle
