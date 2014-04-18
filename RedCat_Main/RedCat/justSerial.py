@@ -8,8 +8,11 @@ import random
 #import pyqtgraph as pg
 import time
 import datetime
+from collections import deque
+from matplotlib import pyplot as plt
 
 inputType = "LOL";
+
 
 def serialEvent(serialInput):
     global holder
@@ -17,8 +20,8 @@ def serialEvent(serialInput):
     sys.stdout.write('WAITING...\n')
     while holder == False:
         inByte = serialInput.read()
-        sys.stdout.write(inByte)
-        sys.stdout.write('% \n')
+        #sys.stdout.write(inByte)
+        #sys.stdout.write('% \n')
         #if len(inByte) > 0:
 	if inByte == "$":
             serialInput.flushOutput()
@@ -31,8 +34,8 @@ def serialEvent(serialInput):
 def waitForConfirmation(confirmationDelay):
     sleep(confirmationDelay / 1000.0)
     inByte = ser.read()
-    sys.stdout.write(inByte);
-    sys.stdout.write('\n');
+    #sys.stdout.write(inByte);
+    #sys.stdout.write('\n');
     if inByte == 'Y':
        ser.flushOutput
        ser.flushInput
@@ -84,7 +87,7 @@ def getNumberInput(message, minimum, maximum, floatFlag, characterCode):
 
       # Appended to user input - a character code, the length of the string, and a termination character
       userInput = characterCode + userInput
-      sys.stdout.write(userInput);
+      #sys.stdout.write(userInput);
       ser.write(str(userInput))
       # Keep resending user-input data until confirmation or time-out
       while(keepSending):
@@ -154,11 +157,11 @@ def user_inputs():
   holderString = "INPUT NUMBER OF RUNS: "
   getNumberInput(holderString, 0, 0, 0, 'B')
 
-  holderString = "INPUT RADIATION VALUE (pA): "
-  radiationDose = getNumberInput(holderString, 0, 0, 1, ' ')
+  #holderString = "INPUT RADIATION VALUE (pA): "
+  #radiationDose = getNumberInput(holderString, 0, 0, 1, ' ')
 
-  holderString = "INPUT DELAY BETWEEN READ AND WRITE CYCLES (ms): "
-  getNumberInput(holderString, 0, 1000000, 1, 'C')
+  #holderString = "INPUT DELAY BETWEEN READ AND WRITE CYCLES (ms): "
+  #getNumberInput(holderString, 0, 1000000, 1, 'C')
 
   holderString = "INPUT NUMBER OF TIMES TO RE-READ ADDRESS AFTER FAILURE: "
   getNumberInput(holderString, 0, 100, 1, 'D')
@@ -194,9 +197,14 @@ def send_inputs():
   getNumberInput(holderSring, 0, 4, 1, 'E') 
   getNumberInput(holderString, 0, 100, 1, 'F');  
     
+
+	
+
     
 port = sys.argv[1];
-outputFile = open('data3.txt', 'w');
+outputFile = open('goodData.txt', 'w');
+latchFile = open('rates.txt', 'w');
+
 
 try:
   ser = serial.Serial(port, 115200, timeout=1)
@@ -220,18 +228,61 @@ else:
 
 ser.write("$")
 ser.flushInput()
-sys.stdout.write('STUFF STILL IN BUFFER\n');
-sys.stdout.write(ser.readline());
+#sys.stdout.write('STUFF STILL IN BUFFER\n');
+#sys.stdout.write(ser.readline());
 ser.flushOutput()
 initTime = time.time()
 
 line = "    "
-        
+dataInt = 0 
+totalBad = 0;
+upsets = 0;
+latches = 0;
 while (line != "$\n"):
     line = ser.readline()
-    if len(line) > 0: #and is_number(line):
+    if len(line) > 2:
     	sys.stdout.write(line);
+	words = line.split();
+	#print(words);
+	#print("\n");
+	if words[0] == "CD":
+		try:		
+			dataInt = int(words[1], 16);
+		except ValueError:
+			sys.stdout.write("Value Error\n")		
+        elif words[0] == "NR":
+		del words[0];
+		for holder in words:
+			try:		
+				badRead = int(holder, 16);
+				if badRead != dataInt:
+					totalBad = totalBad + 1;
+			except ValueError:
+				sys.stdout.write("Value Error\n")						
+		
+		if totalBad == (len(words)):
+			latches = latches + 1
+
+		else:
+			upsets = upsets + len(words) + 1
+		totalBad = 0;
+
+    	if (time.time() - initTime) > 5.0:
+		upsets = upsets / 5.0;
+		latches = latches / 5.0;
+		netLatchesString = "LATCH RATE: " + str(latches) + "\n";
+		latchFile.write(netLatchesString)
+		sys.stdout.write(netLatchesString)
+
+		netUpsetsString = "UPSET RATE: " + str(latches) + "\n";
+		latchFile.write(netUpsetsString);
+		sys.stdout.write(netUpsetsString);
+		initTime = time.time();	
+    		latches = 0;
+    		upsets = 0;
+    
     holderString = str(time.time()) + ": " + line;
+    	    
     outputFile.write(holderString);
     outputFile.write('\n');
 

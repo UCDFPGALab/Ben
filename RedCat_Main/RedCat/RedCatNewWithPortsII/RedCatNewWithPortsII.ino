@@ -14,7 +14,7 @@ const int ADDRESS_MASK = 1022;
 const int DATA_MASK = 30;
 
 const byte DELAY_AFTER_ADDRESS = 0; //in microseconds, 10 is more than enough, but probably depends on cable setup
-const bool VERBOSE = true;
+const bool VERBOSE = false;
 
 typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS, GOT_MODE, GOT_POWER_CYCLES} states;
 typedef enum {ALL0, ALL1, ALTERNATING, NORMAL, RANDOM} mode;
@@ -254,7 +254,14 @@ void reread(const long& address, const int& times, int (*fread)(const long&)) {
     Serial.println();
   }
   else {
-    Serial.println(netFalseReads + 1);
+    Serial.print("BR ");
+    Serial.println(netFalseReads + 1, HEX);
+    Serial.print("NR ");
+    for (i = 0; i < times; i++) {
+      Serial.print(reads[i], HEX);
+      Serial.print("\t");
+    }
+    Serial.println();
   }
 }
 
@@ -388,9 +395,12 @@ void loop() {
             Serial.println(correctData - dataInt); //toBinary(dataInt ^ correctData, 10)
           }
           else {
-            Serial.println(addr);
-            Serial.println(correctData);
-            Serial.println(dataInt);
+            Serial.print("AD ");
+            Serial.println(addr,HEX);
+            Serial.print("CD ");
+            Serial.println(correctData, HEX);
+            Serial.print("DI ");
+            Serial.println(dataInt, HEX);
           }
           // If the read-back data is incorrect reread n times, n = readsAfterFailure
           reread(addressInt, readsAfterFailure, readDataAddr);
@@ -423,7 +433,7 @@ void loop() {
     }
 
     digitalWrite(POWER, LOW);
-    delay(10000);
+    delay(2000);
     digitalWrite(POWER, HIGH);
   }
 }
