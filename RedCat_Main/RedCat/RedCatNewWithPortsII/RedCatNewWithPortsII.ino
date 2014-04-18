@@ -183,8 +183,6 @@ int readDataAddr(const long& address) {
 
   REG_PIOC_ODSR = address;
 
-  delayMicroseconds(20);
-
   return (REG_PIOD_PDSR & 0b01111001111);
 }
 
@@ -195,12 +193,9 @@ void writeData(const long& address, const int& data) {
   REG_PIOC_ODSR = address;
   
   REG_PIOD_ODSR = data;
-  delayMicroseconds(5);
 
   digitalWrite(CS, LOW);
   digitalWrite(WR, LOW);
-
-  delayMicroseconds(5);
   
   digitalWrite(CS, HIGH);
   digitalWrite(WR, HIGH);
@@ -261,12 +256,12 @@ void reread(const long& address, const int& times, int (*fread)(const long&)) {
 
 long incrementAddress(const long& address) {
   // Strange addition is necessary to ensure that dedicated pins do not get set. In this case, pins 33 through 41 are being used and then pins 45 through 51. Thus, when the following situation is met:
-  // 0000000 0000 111111111 0 -> 0000001 0000 000000000 0
-  if ((address & ADDRESS_MASK) < (ADDRESS_MASK - 1)) {
-    return (address + 2);
+  // 0000000 00 111111111 0 -> 0000001 00 000000000 0
+  if ((address & ADDRESS_MASK) == (ADDRESS_MASK)) {
+    return (address + 3074);
   }
   else {
-    return (address + 3074);
+    return (address + 2);
   }
 }
 
@@ -306,10 +301,6 @@ void setup()
     }
   }
   //startTime = micros();
-  REG_PIOD_WPMR = 0x50494F0;
-  REG_PIOD_OWER = 0b1111111111;
-  REG_PIOD_IFER = 0b1111111111;
-  
 }
 
 
@@ -336,22 +327,17 @@ void loop() {
 
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
     
-      if(currentMode == ALL0)
-      {
+      if(currentMode == ALL0) {
          correctData = 0;
       }
-      else if (currentMode == ALL1)
-      {
+      else if (currentMode == ALL1) {
         correctData = 1;
           
       }
-      else if (currentMode == ALTERNATING)
-      {
+      else if (currentMode == ALTERNATING) {
           correctData = addr%2;
-        
       }
-      else if (currentMode == RANDOM)
-      {
+      else if (currentMode == RANDOM) {
         
       }
             
@@ -372,22 +358,17 @@ void loop() {
     digitalWrite(OE, LOW);
     
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
-      if(currentMode == ALL0)
-      {
+      if(currentMode == ALL0) {
          correctData = messedData(0);
       }
-      else if (currentMode == ALL1)
-      {
+      else if (currentMode == ALL1) {
         correctData = 1;
           
       }
-      else if (currentMode == ALTERNATING)
-      {
+      else if (currentMode == ALTERNATING) {
           correctData = addr%2;
-        
       }
-      else if (currentMode == RANDOM)
-      {
+      else if (currentMode == RANDOM) {
         
       }
       readDataAddr(addressInt);
