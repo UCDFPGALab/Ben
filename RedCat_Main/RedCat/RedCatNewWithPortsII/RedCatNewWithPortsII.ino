@@ -4,7 +4,6 @@ const byte CS = 52; // Chip select
 const byte OE = 2; // Output enable''
 const byte WR = 53; // Write enable
 const byte LED = 22; // Testing LED
-//float startTime;
 
 const int NUM_ADDRESSES = 64000;
 
@@ -317,7 +316,6 @@ void setup()
       i = 44;
     }
   }
-  //startTime = micros();
 }
 
 
@@ -332,11 +330,6 @@ void loop() {
     int dataInt = 0;
     int seed = analogRead(0);
 
-    // Current behavior is read all addresses, then write all the addresses.
-    // However, this can be changed to write and address, then read it right away, and so on.
-
-    // REG_PIOD_OWER = 0x3CF;
-    // Set pins to outputs
     pinMode(11, OUTPUT);
     pinMode(12, OUTPUT);
     for (i = 25; i < 31; i++) {
@@ -383,8 +376,6 @@ void loop() {
           Serial.println(dataInt);
           Serial.print("Difference of the data:\t");
           Serial.println(correctData - dataInt); //toBinary(dataInt ^ correctData, 10)
-          //Serial.print("Time after start (microseconds):\t");
-          //Serial.println((micros()-startTime));
         }
         else {
           Serial.println(addr);
