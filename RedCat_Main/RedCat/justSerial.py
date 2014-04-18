@@ -9,7 +9,7 @@ import random
 import time
 import datetime
 
-inputType = "FILE";
+inputType = "LOL";
 
 def serialEvent(serialInput):
     global holder
@@ -167,7 +167,7 @@ def user_inputs():
   holderString = "INPUT MODE:"
   getNumberInput(holderString, 0, 4, 1, 'E');
 
-  holderString = "INPUT NUMBER OF TIMES TO POWER OFF AFTER EACH GROUP OF RUNS: "
+  holderString = "INPUT NUMBER OF RUN GROUPS (POWER CYCLE IN BETWEEN): "
   getNumberInput(holderString, 0, 100, 1, 'F');
 
 def file_input(inputFile):	
@@ -192,7 +192,7 @@ def send_inputs():
   getNumberInput(holderString, 0, 1000000, 1, 'C')
   getNumberInput(holderString, 0, 100, 1, 'D')
   getNumberInput(holderSring, 0, 4, 1, 'E') 
-    
+  getNumberInput(holderString, 0, 100, 1, 'F');  
     
     
 port = sys.argv[1];

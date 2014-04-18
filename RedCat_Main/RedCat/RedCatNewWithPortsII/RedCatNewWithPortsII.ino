@@ -4,6 +4,8 @@ const byte CS = 52; // Chip select
 const byte OE = 2; // Output enable''
 const byte WR = 53; // Write enable
 const byte LED = 22; // Testing LED
+const byte POWER = 23; // Power pin
+//float startTime;
 
 const int NUM_ADDRESSES = 64000;
 
@@ -15,19 +17,19 @@ const int DATA_MASK = 30;
 const byte DELAY_AFTER_ADDRESS = 0; //in microseconds, 10 is more than enough, but probably depends on cable setup
 const bool VERBOSE = true;
 
-typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS, GOT_MODE} states;
-typedef enum {ALL0, ALL1, ALTERNATING, NORMAL, RANDOM} mode;
+typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS, GOT_MODE, GOT_POWER_CYCLES} states;
+typedef enum {ALL0, ALL1, ALTERNATING, RANDOM, NORMAL} mode;
 
 states currentState = NONE;
 mode currentMode = NORMAL;
 
 int currentValue = 0;
 byte output1, output2, output3;
-const char SET_CODES[] = {'a', 'b', 'c', 'd', 'e'};
+const char SET_CODES[] = {'a', 'b', 'c', 'd', 'e', 'f'};
 
 // Data and address integers
 int correctData = 170;
-
+int numPowerCycles = 5;
 int divider = 0;
 int numRuns = 1; // Number of runs
 
@@ -69,23 +71,32 @@ void handlePreviousState() {
       Serial.println("Y");
       break;
     case GOT_MODE:
-       if(currentValue==0) {
-         currentMode = ALL0;
-       }
-       else if(currentValue==1) {
-         currentMode = ALL1;
-       }
-       else if (currentValue == 2) {
-         currentMode = ALTERNATING;
-       }
-       else if (currentValue == 3) {
-         currentMode = NORMAL;
-       }
-       else if (currentValue == 4) {
-         currentMode = RANDOM;
-       }
-       Serial.println("Y");
-       break; 
+      if (currentValue == 0)
+      {
+        currentMode = ALL0;
+      }
+      else if (currentValue == 1)
+      {
+        currentMode = ALL1;
+      }
+      else if (currentValue == 2)
+      {
+        currentMode = ALTERNATING;
+      }
+      else if (currentValue == 3)
+      {
+        currentMode = RANDOM;
+      }
+      else if (currentValue == 4)
+      {
+        currentMode = NORMAL;
+      }
+      Serial.println("Y");
+      break;
+    case GOT_POWER_CYCLES:
+      numPowerCycles = currentValue;
+      Serial.println("Y");
+      break;
   }
   currentValue = 0;
 }
@@ -98,6 +109,7 @@ void handlePreviousState() {
  C = delay between runs
  D = number of times to re-read address after failure
  E = mode
+ F = power cycle
 */
 bool processIncomingByte (const byte& c) {
   if (isdigit(c)) {
@@ -122,6 +134,9 @@ bool processIncomingByte (const byte& c) {
         return false;
       case 'E':
         currentState = GOT_MODE;
+        return false;
+      case 'F':
+        currentState = GOT_POWER_CYCLES;
         return false;
       case TERMINATION:
         return true;
@@ -153,10 +168,10 @@ void establishContact() {
 // Read a byte of data given an address and an array of data
 int readData(const long& address) {
   int data = 0;
-  
+
   digitalWrite(CS, HIGH);
   digitalWrite(OE, HIGH);
-  
+
   REG_PIOC_ODSR = address;
 
   digitalWrite(CS, LOW);
@@ -177,8 +192,6 @@ int readDataAddr(const long& address) {
 
   REG_PIOC_ODSR = address;
 
-  delayMicroseconds(1);
-
   return (REG_PIOD_PDSR & 0b01111001111);
 }
 
@@ -187,12 +200,12 @@ int readDataAddr(const long& address) {
 // Write a byte of data
 void writeData(const long& address, const int& data) {
   REG_PIOC_ODSR = address;
-  
+
   REG_PIOD_ODSR = data;
 
   digitalWrite(CS, LOW);
   digitalWrite(WR, LOW);
-  
+
   digitalWrite(CS, HIGH);
   digitalWrite(WR, HIGH);
 }
@@ -274,26 +287,6 @@ int messedData(const int& data) {
 }
 
 
-void setCorrectData(const int& addr){
-  if(currentMode == ALL0) {
-    correctData = messedData(0);
-  }
-  else if (currentMode == ALL1) {
-    correctData = messedData(255);
-  }
-  else if (currentMode == ALTERNATING) {
-    correctData = correctData ^ 0b1111001111;
-  }
-  else if (currentMode == NORMAL) {
-    correctData = messedData(addr%256);
-  }
-  else if (currentMode == RANDOM) {
-    correctData = messedData(random(256));
-  }
-}
-
-
-
 void setup()
 {
   Serial.begin(115200);
@@ -302,11 +295,13 @@ void setup()
   pinMode(OE, OUTPUT);
   pinMode(WR, OUTPUT);
   pinMode(LED, OUTPUT);
-
+  pinMode(POWER, OUTPUT);
+  
   digitalWrite(LED, HIGH);
   digitalWrite(OE, HIGH);
   digitalWrite(CS, HIGH);
   digitalWrite(WR, HIGH);
+  digitalWrite(POWER, HIGH);
   //These pins are to be set high after all operations to reduce safeguard overhead
 
   // Address pins
@@ -316,6 +311,7 @@ void setup()
       i = 44;
     }
   }
+  //startTime = micros();
 }
 
 
@@ -323,90 +319,125 @@ void setup()
 void loop() {
   establishContact();
   getData();
+  for (int pwrc = 0; pwrc < numPowerCycles; pwrc++) {
 
-  for (int rn = 0; rn < numRuns; rn++) { //main loop for the tests
-    int addr = 0;
-    long addressInt = 0;
-    int dataInt = 0;
-    int seed = analogRead(0);
+    for (int rn = 0; rn < numRuns; rn++) { //main loop for the tests
+      int addr = 0;
+      long addressInt = 0;
+      int dataInt = 0;
 
-    pinMode(11, OUTPUT);
-    pinMode(12, OUTPUT);
-    for (i = 25; i < 31; i++) {
-      pinMode(i, OUTPUT);
-    }
+      // Current behavior is read all addresses, then write all the addresses.
+      // However, this can be changed to write and address, then read it right away, and so on.
 
-    correctData = 0;
-    randomSeed(seed);
-
-    for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
-      setCorrectData(addr);
-            
-      writeData(addressInt, correctData);
-      addressInt = incrementAddress(addressInt);
-    }
-
-    // Set pins to inputs
-    pinMode(11, INPUT);
-    pinMode(12, INPUT);
-    for (i = 25; i < 31; i++) {
-      pinMode(i, INPUT);
-    }
-    addressInt = 0; //reset the address between our run and read cycles back to 0
-    correctData = 0;
-    randomSeed(seed);
-    
-    //Bring the necessary pins down for the read cycle
-    digitalWrite(CS, LOW);
-    digitalWrite(OE, LOW);
-    
-    for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
-      setCorrectData(addr);
-      readDataAddr(addressInt);
-      dataInt = readDataAddr(addressInt);
-
-      // Print out the address and received data if bad data read
-      if (correctData != dataInt) {
-        if (VERBOSE) {
-          Serial.print("\nAddress:\t");
-          Serial.println(addr);
-          Serial.print("Correct data:\t");
-          Serial.println(correctData);
-          Serial.print("Read data:\t");
-          Serial.println(dataInt);
-          Serial.print("Difference of the data:\t");
-          Serial.println(correctData - dataInt); //toBinary(dataInt ^ correctData, 10)
-        }
-        else {
-          Serial.println(addr);
-          Serial.println(correctData);
-          Serial.println(dataInt);
-        }
-        // If the read-back data is incorrect reread n times, n = readsAfterFailure
-        reread(addressInt, readsAfterFailure, readDataAddr);
+      // REG_PIOD_OWER = 0x3CF;
+      // Set pins to outputs
+      pinMode(11, OUTPUT);
+      pinMode(12, OUTPUT);
+      for (i = 25; i < 31; i++) {
+        pinMode(i, OUTPUT);
       }
-      addressInt = incrementAddress(addressInt);
+
+      for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
+
+        if (currentMode == ALL0) {
+          correctData = 0;
+        }
+        else if (currentMode == ALL1) {
+          correctData = 1;
+
+        }
+        else if (currentMode == ALTERNATING) {
+          correctData = addr % 2;
+        }
+        else if (currentMode == RANDOM) {
+
+        }
+
+        writeData(addressInt, correctData);
+        addressInt = incrementAddress(addressInt);
+      }
+
+      // Set pins to inputs
+      pinMode(11, INPUT);
+      pinMode(12, INPUT);
+      for (i = 25; i < 31; i++) {
+        pinMode(i, INPUT);
+      }
+      addressInt = 0; //reset the address between our run and read cycles back to 0
+
+      //Bring the necessary pins down for the read cycle
+      digitalWrite(CS, LOW);
+      digitalWrite(OE, LOW);
+
+      for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
+        if (currentMode == ALL0) {
+          correctData = messedData(0);
+        }
+        else if (currentMode == ALL1) {
+          correctData = 1;
+
+        }
+        else if (currentMode == ALTERNATING) {
+          correctData = addr % 2;
+        }
+        else if (currentMode == RANDOM) {
+
+        }
+        readDataAddr(addressInt);
+        dataInt = readDataAddr(addressInt);
+
+        // Print out the address and received data if bad data read
+        if (correctData != dataInt) {
+          if (VERBOSE) {
+            Serial.print("\nAddress:\t");
+            Serial.println(addr);
+            Serial.print("Correct data:\t");
+            Serial.println(correctData);
+            Serial.print("Read data:\t");
+            Serial.println(dataInt);
+            Serial.print("Difference of the data:\t");
+            Serial.println(correctData - dataInt); //toBinary(dataInt ^ correctData, 10)
+            //Serial.print("Time after start (microseconds):\t");
+            //Serial.println((micros()-startTime));
+          }
+          else {
+            Serial.println(addr);
+            Serial.println(correctData);
+            Serial.println(dataInt);
+          }
+          // If the read-back data is incorrect reread n times, n = readsAfterFailure
+          reread(addressInt, readsAfterFailure, readDataAddr);
+        }
+        addressInt = incrementAddress(addressInt);
+      }
+
+      //Bring the necessary pins up at the end of the read cycle
+      digitalWrite(OE, HIGH);
+      digitalWrite(CS, HIGH);
+
+      if (VERBOSE) {
+        Serial.print("Done with run ");
+        Serial.print(rn + 1);
+        Serial.print('/');
+        Serial.println(numRuns);
+      }
+      else {
+        Serial.println("--");
+      }
     }
-    
-    //Bring the necessary pins up at the end of the read cycle
-    digitalWrite(OE, HIGH);
-    digitalWrite(CS, HIGH);
 
     if (VERBOSE) {
-      Serial.print("Done with run ");
-      Serial.print(rn + 1);
-      Serial.print('/');
-      Serial.println(numRuns);
+      Serial.print("Done with all runs, power cycle number ");
+      Serial.print(pwrc+1);
+      Serial.print(" of ");
+      Serial.println(numPowerCycles);
     }
     else {
-      Serial.println("--");
+      Serial.println("----\n");
     }
-  }
 
-  if (VERBOSE) {
-    Serial.println("Done with all runs, ready for more data\n");
-  }
-  else {
-    Serial.println("----\n");
+    digitalWrite(POWER, LOW);
+    delay(10000);
+    digitalWrite(POWER, HIGH);
   }
 }
