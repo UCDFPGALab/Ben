@@ -9,6 +9,8 @@ import random
 import time
 import datetime
 
+inputType = "LOL";
+
 def serialEvent(serialInput):
     global holder
     global initialized
@@ -52,7 +54,8 @@ def waitForConfirmation(confirmationDelay):
 #                      B = number of runs
 #                      C = delay between runs
 #                      D = number of times to re-read address after failure
-#                      (space) = no character code - only PC needs to know value                    
+#                      (space) = no character code - only PC needs to know value
+#		       E = mode                   
 def getNumberInput(message, minimum, maximum, floatFlag, characterCode):
   validInput = False
   ser.flush()
@@ -61,7 +64,12 @@ def getNumberInput(message, minimum, maximum, floatFlag, characterCode):
   keepSending = True;
   confirmationDelay = 1
   while (validInput == False):
-    userInput = raw_input(message)        
+    if inputType == "FILE":
+    	userInput = message
+	sys.stdout.write(message)
+	sys.stdout.write("\n")
+    else:    
+	userInput = raw_input(message) 
     try:
       if floatFlag == 0:
           int(userInput)
@@ -151,13 +159,33 @@ def user_inputs():
 
   holderString = "INPUT NUMBER OF TIMES TO RE-READ ADDRESS AFTER FAILURE: "
   getNumberInput(holderString, 0, 100, 1, 'D')
-  
+
+
+  holderString = "INPUT MODE:"
+  getNumberInput(holderString, 0, 4, 1, 'E');
+
+def file_input(inputFile):	
+	line = inputFile.readline();
+	while line[0] == "#" or len(line) < 2 :
+		line = inputFile.readline();
+
+	words = line.split();
+	sys.stdout.write(words[0]);
+	# RUNS, DELAY BETWEEN READ AND WRITE, NUMBER OF RE-READS, MODE, DATA VALUE
+	getNumberInput(words[0], 0, 0, 0, 'B');
+	getNumberInput(words[1], 0, 1000000, 1, 'C');
+	getNumberInput(words[2], 0, 100, 1, 'D');
+	getNumberInput(words[3], 0, 4, 1, 'E');
+	if len(words) > 4:
+		getNumberInput(words[4], 0, 255, 0, 'A');
+ 
 def send_inputs():
   dataInt = getNumberInput(holderString, 0, 255, 0, 'A')
   getNumberInput(holderString, 0, 0, 0, 'B')
   radiationDose = getNumberInput(holderString, 0, 0, 1, ' ')
   getNumberInput(holderString, 0, 1000000, 1, 'C')
   getNumberInput(holderString, 0, 100, 1, 'D')
+  getNumberInput(holderSring, 0, 4, 1, 'E') 
     
     
     
@@ -171,13 +199,18 @@ except IOError:
   sys.exit();
 
 aFile = open('logFile', 'w')
+inputFile = open('runs.txt', 'r')
+
 holder = False
 WIDTH = 4.40
 LENGTH = 3.00
 
 serialEvent(ser)               
 
-user_inputs();
+if inputType == "FILE":
+	file_input(inputFile)
+else:
+	user_inputs()
 
 ser.write("$")
 ser.flushInput()

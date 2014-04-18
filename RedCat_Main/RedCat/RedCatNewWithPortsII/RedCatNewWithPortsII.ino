@@ -8,7 +8,7 @@ const byte LED = 22; // Testing LED
 
 const int NUM_ADDRESSES = 64000;
 
-const int NUM_SET_CODES = 4;
+const int NUM_SET_CODES = 5;
 const char TERMINATION = '$';
 const int ADDRESS_MASK = 1022;
 const int DATA_MASK = 30;
@@ -16,11 +16,15 @@ const int DATA_MASK = 30;
 const byte DELAY_AFTER_ADDRESS = 0; //in microseconds, 10 is more than enough, but probably depends on cable setup
 const bool VERBOSE = true;
 
-typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS} states;
+typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS, GOT_MODE} states;
+typedef enum {ALL0, ALL1, ALTERNATING, RANDOM, NORMAL} mode;
+
 states currentState = NONE;
+mode currentMode = NORMAL;
+
 int currentValue = 0;
 byte output1, output2, output3;
-const char SET_CODES[] = {'a', 'b', 'c', 'd'};
+const char SET_CODES[] = {'a', 'b', 'c', 'd', 'e'};
 
 // Data and address integers
 int correctData = 170;
@@ -65,6 +69,29 @@ void handlePreviousState() {
       readsAfterFailure = currentValue;
       Serial.println("Y");
       break;
+    case GOT_MODE:
+       if(currentValue==0)
+       {
+         currentMode = ALL0;
+       }
+       else if(currentValue==1)
+       {
+         currentMode = ALL1;
+       }
+       else if (currentValue == 2)     
+       {
+         currentMode = ALTERNATING;
+       }
+       else if (currentValue == 3)    
+       {
+         currentMode = RANDOM;
+       }
+       else if (currentValue == 4)      
+       {
+         currentMode = NORMAL;
+       }
+       Serial.println("Y");
+       break; 
   }
   currentValue = 0;
 }
@@ -76,6 +103,7 @@ void handlePreviousState() {
  B = number of runs
  C = delay between runs
  D = number of times to re-read address after failure
+ E = mode
 */
 bool processIncomingByte (const byte& c) {
   if (isdigit(c)) {
@@ -97,6 +125,9 @@ bool processIncomingByte (const byte& c) {
         return false;
       case 'D':
         currentState = GOT_REPEAT_READS;
+        return false;
+      case 'E':
+        currentState = GOT_MODE;
         return false;
       case TERMINATION:
         return true;
@@ -131,7 +162,7 @@ int readData(const long& address) {
   
   digitalWrite(CS, HIGH);
   digitalWrite(OE, HIGH);
-
+  
   REG_PIOC_ODSR = address;
 
   digitalWrite(CS, LOW);
@@ -152,7 +183,7 @@ int readDataAddr(const long& address) {
 
   REG_PIOC_ODSR = address;
 
-  delayMicroseconds(5);
+  delayMicroseconds(20);
 
   return (REG_PIOD_PDSR & 0b01111001111);
 }
@@ -162,8 +193,8 @@ int readDataAddr(const long& address) {
 // Write a byte of data
 void writeData(const long& address, const int& data) {
   REG_PIOC_ODSR = address;
+  
   REG_PIOD_ODSR = data;
-
   delayMicroseconds(5);
 
   digitalWrite(CS, LOW);
@@ -211,6 +242,8 @@ void reread(const long& address, const int& times, int (*fread)(const long&)) {
   }
 
   if (VERBOSE) {
+    Serial.print("CURRENT MODE: ");
+    Serial.println(currentMode);
     Serial.print("Total number of invalid reads: ");
     Serial.println(netFalseReads + 1);
     Serial.print("Read back: ");
@@ -302,7 +335,26 @@ void loop() {
     }
 
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
-      correctData = messedData(addr%256);
+    
+      if(currentMode == ALL0)
+      {
+         correctData = 0;
+      }
+      else if (currentMode == ALL1)
+      {
+        correctData = 1;
+          
+      }
+      else if (currentMode == ALTERNATING)
+      {
+          correctData = addr%2;
+        
+      }
+      else if (currentMode == RANDOM)
+      {
+        
+      }
+            
       writeData(addressInt, correctData);
       addressInt = incrementAddress(addressInt);
     }
@@ -318,9 +370,27 @@ void loop() {
     //Bring the necessary pins down for the read cycle
     digitalWrite(CS, LOW);
     digitalWrite(OE, LOW);
-
+    
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
-      correctData = messedData(addr%256);
+      if(currentMode == ALL0)
+      {
+         correctData = messedData(0);
+      }
+      else if (currentMode == ALL1)
+      {
+        correctData = 1;
+          
+      }
+      else if (currentMode == ALTERNATING)
+      {
+          correctData = addr%2;
+        
+      }
+      else if (currentMode == RANDOM)
+      {
+        
+      }
+      readDataAddr(addressInt);
       dataInt = readDataAddr(addressInt);
 
       // Print out the address and received data if bad data read
