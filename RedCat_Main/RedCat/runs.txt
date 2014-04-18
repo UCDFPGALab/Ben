@@ -3,11 +3,12 @@
 #	ALL0: All 0's - Coded to 0
 #	ALL1: All 1's - Coded to 1
 #	ALTERNATING: Alternating 1's and 0's - Coded to 2
-#	RANDOM: Random - Coded to 3
-#	NORMAL: User input - Coded to 4
+#	NORMAL: User input - Coded to 3
+#	RANDOM: Random - Coded to 4
 
 
-5 5 5 1
+
+5 5 5 4 121
 
 
 

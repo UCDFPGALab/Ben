@@ -9,7 +9,7 @@ import random
 import time
 import datetime
 
-inputType = "LOL";
+inputType = "FILE";
 
 def serialEvent(serialInput):
     global holder
@@ -55,7 +55,9 @@ def waitForConfirmation(confirmationDelay):
 #                      C = delay between runs
 #                      D = number of times to re-read address after failure
 #                      (space) = no character code - only PC needs to know value
-#		       E = mode                   
+#		       E = mode (0 = all 0's, 1 = all 1's, 2 = alternating 0's and 1's, 3 = normal, 4 = random)      
+#		       F = number of times to power cycle
+
 def getNumberInput(message, minimum, maximum, floatFlag, characterCode):
   validInput = False
   ser.flush()
@@ -66,10 +68,11 @@ def getNumberInput(message, minimum, maximum, floatFlag, characterCode):
   while (validInput == False):
     if inputType == "FILE":
     	userInput = message
-	sys.stdout.write(message)
-	sys.stdout.write("\n")
+	time.sleep(0.05);
+	#sys.stdout.write("\n")
     else:    
 	userInput = raw_input(message) 
+
     try:
       if floatFlag == 0:
           int(userInput)
@@ -81,7 +84,7 @@ def getNumberInput(message, minimum, maximum, floatFlag, characterCode):
 
       # Appended to user input - a character code, the length of the string, and a termination character
       userInput = characterCode + userInput
-
+      sys.stdout.write(userInput);
       ser.write(str(userInput))
       # Keep resending user-input data until confirmation or time-out
       while(keepSending):
@@ -164,19 +167,22 @@ def user_inputs():
   holderString = "INPUT MODE:"
   getNumberInput(holderString, 0, 4, 1, 'E');
 
+  holderString = "INPUT NUMBER OF TIMES TO POWER OFF AFTER EACH GROUP OF RUNS: "
+  getNumberInput(holderString, 0, 100, 1, 'F');
+
 def file_input(inputFile):	
 	line = inputFile.readline();
 	while line[0] == "#" or len(line) < 2 :
 		line = inputFile.readline();
-
+		
 	words = line.split();
-	sys.stdout.write(words[0]);
 	# RUNS, DELAY BETWEEN READ AND WRITE, NUMBER OF RE-READS, MODE, DATA VALUE
 	getNumberInput(words[0], 0, 0, 0, 'B');
 	getNumberInput(words[1], 0, 1000000, 1, 'C');
 	getNumberInput(words[2], 0, 100, 1, 'D');
 	getNumberInput(words[3], 0, 4, 1, 'E');
-	if len(words) > 4:
+	getNumberInput(words[4], 0, 100, 1, 'F');
+	if len(words) > 5:
 		getNumberInput(words[4], 0, 255, 0, 'A');
  
 def send_inputs():
@@ -225,7 +231,8 @@ while (line != "$\n"):
     line = ser.readline()
     if len(line) > 0: #and is_number(line):
     	sys.stdout.write(line);
-    outputFile.write(line);
+    holderString = str(time.time()) + ": " + line;
+    outputFile.write(holderString);
     outputFile.write('\n');
 
 ser.close()
