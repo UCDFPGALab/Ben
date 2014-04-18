@@ -4,7 +4,6 @@ const byte CS = 52; // Chip select
 const byte OE = 2; // Output enable''
 const byte WR = 53; // Write enable
 const byte LED = 22; // Testing LED
-//float startTime;
 
 const int NUM_ADDRESSES = 64000;
 
@@ -17,7 +16,7 @@ const byte DELAY_AFTER_ADDRESS = 0; //in microseconds, 10 is more than enough, b
 const bool VERBOSE = true;
 
 typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS, GOT_MODE} states;
-typedef enum {ALL0, ALL1, ALTERNATING, RANDOM, NORMAL} mode;
+typedef enum {ALL0, ALL1, ALTERNATING, NORMAL, RANDOM} mode;
 
 states currentState = NONE;
 mode currentMode = NORMAL;
@@ -70,25 +69,20 @@ void handlePreviousState() {
       Serial.println("Y");
       break;
     case GOT_MODE:
-       if(currentValue==0)
-       {
+       if(currentValue==0) {
          currentMode = ALL0;
        }
-       else if(currentValue==1)
-       {
+       else if(currentValue==1) {
          currentMode = ALL1;
        }
-       else if (currentValue == 2)     
-       {
+       else if (currentValue == 2) {
          currentMode = ALTERNATING;
        }
-       else if (currentValue == 3)    
-       {
-         currentMode = RANDOM;
-       }
-       else if (currentValue == 4)      
-       {
+       else if (currentValue == 3) {
          currentMode = NORMAL;
+       }
+       else if (currentValue == 4) {
+         currentMode = RANDOM;
        }
        Serial.println("Y");
        break; 
@@ -182,6 +176,8 @@ int readDataAddr(const long& address) {
   //function assumes that OE and CS have already been drawn low
 
   REG_PIOC_ODSR = address;
+
+  delayMicroseconds(1);
 
   return (REG_PIOD_PDSR & 0b01111001111);
 }
@@ -278,6 +274,26 @@ int messedData(const int& data) {
 }
 
 
+void setCorrectData(const int& addr){
+  if(currentMode == ALL0) {
+    correctData = messedData(0);
+  }
+  else if (currentMode == ALL1) {
+    correctData = messedData(255);
+  }
+  else if (currentMode == ALTERNATING) {
+    correctData = correctData ^ 0b1111001111;
+  }
+  else if (currentMode == NORMAL) {
+    correctData = messedData(addr%256);
+  }
+  else if (currentMode == RANDOM) {
+    correctData = messedData(random(256));
+  }
+}
+
+
+
 void setup()
 {
   Serial.begin(115200);
@@ -300,7 +316,6 @@ void setup()
       i = 44;
     }
   }
-  //startTime = micros();
 }
 
 
@@ -313,33 +328,19 @@ void loop() {
     int addr = 0;
     long addressInt = 0;
     int dataInt = 0;
+    int seed = analogRead(0);
 
-    // Current behavior is read all addresses, then write all the addresses.
-    // However, this can be changed to write and address, then read it right away, and so on.
-
-    // REG_PIOD_OWER = 0x3CF;
-    // Set pins to outputs
     pinMode(11, OUTPUT);
     pinMode(12, OUTPUT);
     for (i = 25; i < 31; i++) {
       pinMode(i, OUTPUT);
     }
 
+    correctData = 0;
+    randomSeed(seed);
+
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
-    
-      if(currentMode == ALL0) {
-         correctData = 0;
-      }
-      else if (currentMode == ALL1) {
-        correctData = 1;
-          
-      }
-      else if (currentMode == ALTERNATING) {
-          correctData = addr%2;
-      }
-      else if (currentMode == RANDOM) {
-        
-      }
+      setCorrectData(addr);
             
       writeData(addressInt, correctData);
       addressInt = incrementAddress(addressInt);
@@ -352,25 +353,15 @@ void loop() {
       pinMode(i, INPUT);
     }
     addressInt = 0; //reset the address between our run and read cycles back to 0
+    correctData = 0;
+    randomSeed(seed);
     
     //Bring the necessary pins down for the read cycle
     digitalWrite(CS, LOW);
     digitalWrite(OE, LOW);
     
     for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
-      if(currentMode == ALL0) {
-         correctData = messedData(0);
-      }
-      else if (currentMode == ALL1) {
-        correctData = 1;
-          
-      }
-      else if (currentMode == ALTERNATING) {
-          correctData = addr%2;
-      }
-      else if (currentMode == RANDOM) {
-        
-      }
+      setCorrectData(addr);
       readDataAddr(addressInt);
       dataInt = readDataAddr(addressInt);
 
@@ -385,8 +376,6 @@ void loop() {
           Serial.println(dataInt);
           Serial.print("Difference of the data:\t");
           Serial.println(correctData - dataInt); //toBinary(dataInt ^ correctData, 10)
-          //Serial.print("Time after start (microseconds):\t");
-          //Serial.println((micros()-startTime));
         }
         else {
           Serial.println(addr);
