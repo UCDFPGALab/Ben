@@ -369,6 +369,7 @@ void loop() {
       for (i = 25; i < 31; i++) {
         pinMode(i, INPUT);
       }
+      
       addressInt = 0; //reset the address between our run and read cycles back to 0
       correctData = 0;
       randomSeed(seed);
@@ -376,7 +377,6 @@ void loop() {
       //Bring the necessary pins down for the read cycle
       digitalWrite(CS, LOW);
       digitalWrite(OE, LOW);
-      
       for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
         setCorrectData(addr);
         readDataAddr(addressInt);
@@ -407,6 +407,7 @@ void loop() {
         }
         addressInt = incrementAddress(addressInt);
       }
+      
       
       //Bring the necessary pins up at the end of the read cycle
       digitalWrite(OE, HIGH);

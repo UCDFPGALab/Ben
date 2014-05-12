@@ -8,8 +8,8 @@ import random
 #import pyqtgraph as pg
 import time
 import datetime
-from collections import deque
-from matplotlib import pyplot as plt
+#from collections import deque
+#from matplotlib import pyplot as plt
 
 inputType = "LOL";
 
@@ -202,8 +202,8 @@ def send_inputs():
 
     
 port = sys.argv[1];
-outputFile = open('goodData.txt', 'w');
-latchFile = open('rates.txt', 'w');
+outputFile = open('goodData.txt', 'a');
+latchFile = open('rates.txt', 'a');
 
 
 try:
@@ -271,12 +271,15 @@ while (line != "$\n"):
 		upsets = upsets / 5.0;
 		latches = latches / 5.0;
 		netLatchesString = "LATCH RATE: " + str(latches) + "\n";
-		latchFile.write(netLatchesString)
 		sys.stdout.write(netLatchesString)
+		netLatchesString = str(time.time()) + ": " + netLatchesString;
+		
+		latchFile.write(netLatchesString)
 
 		netUpsetsString = "UPSET RATE: " + str(latches) + "\n";
-		latchFile.write(netUpsetsString);
 		sys.stdout.write(netUpsetsString);
+		netUpsetsString  = str(time.time()) + ": " + netUpsetsString;
+		latchFile.write(netUpsetsString);
 		initTime = time.time();	
     		latches = 0;
     		upsets = 0;
