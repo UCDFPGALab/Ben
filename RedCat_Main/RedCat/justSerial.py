@@ -9,7 +9,8 @@ import random
 import time
 import datetime
 #from collections import deque
-#from matplotlib import pyplot as plt
+#from matplotlib import pyplot as pltar
+
 
 inputType = "LOL";
 
@@ -240,54 +241,54 @@ upsets = 0;
 latches = 0;
 while (line != "$\n"):
     line = ser.readline()
-    if len(line) > 2:
+    if len(line) > 0:
     	sys.stdout.write(line);
 	words = line.split();
 	#print(words);
 	#print("\n");
-	if words[0] == "CD":
-		try:		
-			dataInt = int(words[1], 16);
-		except ValueError:
-			sys.stdout.write("Value Error\n")		
-        elif words[0] == "NR":
-		del words[0];
-		for holder in words:
-			try:		
-				badRead = int(holder, 16);
-				if badRead != dataInt:
-					totalBad = totalBad + 1;
-			except ValueError:
-				sys.stdout.write("Value Error\n")						
-		
-		if totalBad == (len(words)):
-			latches = latches + 1
+#	if words[0] == "CD":
+#		try:		
+#			dataInt = int(words[1], 16);
+#		except ValueError:
+#			sys.stdout.write("Value Error\n")		
+#        elif words[0] == "NR":
+#		del words[0];
+#		for holder in words:
+#			try:		
+#				badRead = int(holder, 16);
+#				if badRead != dataInt:
+#					totalBad = totalBad + 1;
+#			except ValueError:
+#				sys.stdout.write("Value Error\n")						
+#		
+#		if totalBad == (len(words)):
+#			latches = latches + 1
 
-		else:
-			upsets = upsets + len(words) + 1
-		totalBad = 0;
+#		else:
+#			upsets = upsets + len(words) + 1
+#		totalBad = 0;
 
-    	if (time.time() - initTime) > 5.0:
-		upsets = upsets / 5.0;
-		latches = latches / 5.0;
-		netLatchesString = "LATCH RATE: " + str(latches) + "\n";
-		sys.stdout.write(netLatchesString)
-		netLatchesString = str(time.time()) + ": " + netLatchesString;
-		
-		latchFile.write(netLatchesString)
+#    	if (time.time() - initTime) > 5.0:
+#		upsets = upsets / 5.0;
+#		latches = latches / 5.0;
+#		netLatchesString = "LATCH RATE: " + str(latches) + "\n";
+#		sys.stdout.write(netLatchesString)
+#		netLatchesString = str(time.time()) + ": " + netLatchesString;
+#		
+#		latchFile.write(netLatchesString)
 
-		netUpsetsString = "UPSET RATE: " + str(latches) + "\n";
-		sys.stdout.write(netUpsetsString);
-		netUpsetsString  = str(time.time()) + ": " + netUpsetsString;
-		latchFile.write(netUpsetsString);
-		initTime = time.time();	
-    		latches = 0;
-    		upsets = 0;
-    
-    holderString = str(time.time()) + ": " + line;
-    	    
-    outputFile.write(holderString);
-    outputFile.write('\n');
+#		netUpsetsString = "UPSET RATE: " + str(latches) + "\n";
+#		sys.stdout.write(netUpsetsString);
+#		netUpsetsString  = str(time.time()) + ": " + netUpsetsString;
+#		latchFile.write(netUpsetsString);
+#		initTime = time.time();	
+#    		latches = 0;
+#    		upsets = 0;
+#    
+#    holderString = str(time.time()) + ": " + line;
+#    	    
+#    outputFile.write(holderString);
+#    outputFile.write('\n');
 
 ser.close()
 

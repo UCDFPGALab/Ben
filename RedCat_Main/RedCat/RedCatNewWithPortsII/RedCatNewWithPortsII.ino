@@ -4,9 +4,10 @@ const byte CS = 52; // Chip select
 const byte OE = 2; // Output enable''
 const byte WR = 53; // Write enable
 const byte LED = 22; // Testing LED
-const byte POWER = 23; // Power pin
+//const byte POWER = 23; // Power pin
+const byte VCC = 23;
 
-const int NUM_ADDRESSES = 64000;
+const int NUM_ADDRESSES = 60000;
 
 const int NUM_SET_CODES = 5;
 const char TERMINATION = '$';
@@ -14,7 +15,7 @@ const int ADDRESS_MASK = 1022;
 const int DATA_MASK = 30;
 
 const byte DELAY_AFTER_ADDRESS = 0; //in microseconds, 10 is more than enough, but probably depends on cable setup
-const bool VERBOSE = false;
+const bool VERBOSE = true;
 
 typedef enum {NONE, GOT_DATA, GOT_NUM_RUNS, GOT_DELAY, GOT_REPEAT_READS, GOT_MODE, GOT_POWER_CYCLES} states;
 typedef enum {ALL0, ALL1, ALTERNATING, NORMAL, RANDOM} mode;
@@ -167,7 +168,7 @@ int readData(const long& address) {
   digitalWrite(OE, HIGH);
   
   REG_PIOC_ODSR = address;
-
+  delayMicroseconds(10);
   digitalWrite(CS, LOW);
   digitalWrite(OE, LOW);
 
@@ -186,7 +187,7 @@ int readDataAddr(const long& address) {
 
   REG_PIOC_ODSR = address;
 
-  delayMicroseconds(1);
+  delayMicroseconds(1000);
 
   return (REG_PIOD_PDSR & 0b01111001111);
 }
@@ -242,15 +243,31 @@ void reread(const long& address, const int& times, int (*fread)(const long&)) {
   }
 
   if (VERBOSE) {
+    Serial.println(" ");
+    Serial.println(" ");
     Serial.print("CURRENT MODE: ");
     Serial.println(currentMode);
+    Serial.print("ADDRESS: ");
+    Serial.println(toBinary(address, 16));
+    Serial.print("CORRECT DATA: ");
+    Serial.print(correctData);
+    Serial.print("\\\\");
+    Serial.println(toBinary(correctData, 10));
+    
     Serial.print("Total number of invalid reads: ");
     Serial.println(netFalseReads + 1);
     Serial.print("Read back: ");
-    for (i = 0; i < times; i++) {
+    for (int i = 0; i < times; i++) {
       Serial.print(reads[i]);
-      Serial.print("\t");
+      Serial.print("\\\\");
+      Serial.print(correctData);
+      Serial.print("\\\\");
+      Serial.print(toBinary((~(reads[i] & correctData)), 10));
+      Serial.print('e');
+      Serial.println(i);
+      //Serial.print("\t");
     }
+    Serial.println();
     Serial.println();
   }
   else {
@@ -301,7 +318,12 @@ void setCorrectData(const int& addr){
     correctData = correctData ^ 0b1111001111;
   }
   else if (currentMode == NORMAL) {
-    correctData = messedData(addr%256);
+    //correctData = correctData ^ 0b1111001111;
+    //correctData = messedData(addr%256);  -- Silly; don't do anything
+    //correctData = messedData(121);
+    //Serial.print("CORRECT DATA: ");
+    //Serial.println(correctData);
+    //delay(2000);
   }
   else if (currentMode == RANDOM) {
     correctData = messedData(random(256));
@@ -316,9 +338,12 @@ void setup() {
   pinMode(CS, OUTPUT);
   pinMode(OE, OUTPUT);
   pinMode(WR, OUTPUT);
+  pinMode(VCC, OUTPUT);
+  
   pinMode(LED, OUTPUT);
-
+  
   digitalWrite(LED, HIGH);
+  digitalWrite(VCC, HIGH);
   digitalWrite(OE, HIGH);
   digitalWrite(CS, HIGH);
   digitalWrite(WR, HIGH);
@@ -338,9 +363,12 @@ void setup() {
 void loop() {
   establishContact();
   getData();
+  Serial.print("CORRECT DATA: ");
+  Serial.println(correctData);
+  delay(3000);
 
   for (int pwrc = 0; pwrc < numPowerCycles; pwrc++) {
-  
+    digitalWrite(VCC, HIGH);
     for (int rn = 0; rn < numRuns; rn++) { //main loop for the tests
       int addr = 0;
       long addressInt = 0;
@@ -353,7 +381,7 @@ void loop() {
         pinMode(i, OUTPUT);
       }
 
-      correctData = 0;
+      //correctData = 0;
       randomSeed(seed);
 
       for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
@@ -371,7 +399,7 @@ void loop() {
       }
       
       addressInt = 0; //reset the address between our run and read cycles back to 0
-      correctData = 0;
+      //correctData = 0;
       randomSeed(seed);
       
       //Bring the necessary pins down for the read cycle
@@ -379,11 +407,16 @@ void loop() {
       digitalWrite(OE, LOW);
       for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
         setCorrectData(addr);
-        readDataAddr(addressInt);
+        //readDataAddr(addressInt);
+        
         dataInt = readDataAddr(addressInt);
-
+        //dataInt = readData(addressInt);
+        
         // Print out the address and received data if bad data read
         if (correctData != dataInt) {
+          Serial.print("ADDRESS NUMBER: ");
+          Serial.println(addr);
+          /*
           if (VERBOSE) {
             Serial.print("\nAddress:\t");
             Serial.println(addr);
@@ -402,9 +435,16 @@ void loop() {
             Serial.print("DI ");
             Serial.println(dataInt, HEX);
           }
+          */
           // If the read-back data is incorrect reread n times, n = readsAfterFailure
           reread(addressInt, readsAfterFailure, readDataAddr);
+          delay(1000);
         }
+        //else
+        //{
+        //     Serial.println(dataInt);
+ 
+        //}
         addressInt = incrementAddress(addressInt);
       }
       
@@ -432,9 +472,9 @@ void loop() {
     else {
       Serial.println("----\n");
     }
-
-    digitalWrite(POWER, LOW);
+    
+    digitalWrite(VCC, LOW);
     delay(2000);
-    digitalWrite(POWER, HIGH);
+    digitalWrite(VCC, HIGH);
   }
 }
