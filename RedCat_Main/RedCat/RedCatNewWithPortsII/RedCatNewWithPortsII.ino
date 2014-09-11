@@ -7,7 +7,7 @@ const byte LED = 22; // Testing LED
 //const byte POWER = 23; // Power pin
 const byte VCC = 23;
 
-const int NUM_ADDRESSES = 60000;
+const int NUM_ADDRESSES = 64000;
 
 const int NUM_SET_CODES = 5;
 const char TERMINATION = '$';
@@ -185,21 +185,156 @@ int readData(const long& address) {
 int readDataAddr(const long& address) {
   //function assumes that OE and CS have already been drawn low
 
-  REG_PIOC_ODSR = address;
+ /*
+  digitalRead(30);  // Least significant bit
+  digitalRead(12);
+  digitalRead(11);
+  digitalRead(29);
+  digitalRead(28);
+  digitalRead(27);
+  digitalRead(26);
+  digitalRead(25); // Most Significant Bit
+ */
+ 
+ /*
+  Serial.print("ADDRESS: ");
+  Serial.print((address & 32768) ? 1 : 0);
+  Serial.print((address & 16384) ? 1 : 0);
+  Serial.print((address & 8192) ? 1 : 0);
+  Serial.print((address & 4096) ? 1 : 0);
+  Serial.print((address & 2048) ? 1 : 0);
+  Serial.print((address & 1024) ? 1 : 0);
+  Serial.print((address & 512) ? 1 : 0);
+  Serial.print((address & 256) ? 1 : 0);
+  Serial.print((address & 128) ? 1 : 0);
+  Serial.print((address & 64) ? 1 : 0);
+  Serial.print((address & 32) ? 1 : 0);
+  Serial.print((address & 16) ? 1 : 0);
+  Serial.print((address & 8) ? 1 : 0);
+  Serial.print((address & 4) ? 1 : 0);
+  Serial.print((address & 2) ? 1 : 0);
+  Serial.println((address & 1) ? 1 : 0);
+  */
+ 
+  
+  digitalWrite(45, (address & 1)); //A0 = least significant bit
+  digitalWrite(46, (address & 2));
+  digitalWrite(47, (address & 4));
+  digitalWrite(48, (address & 8));
+  digitalWrite(49, (address & 16));
+  digitalWrite(50, (address & 32));
+  digitalWrite(51, (address & 64));
+  digitalWrite(41, (address & 128));
+  digitalWrite(40, (address & 256));
+  digitalWrite(39, (address & 512));
+  digitalWrite(38, (address & 1024));
+  digitalWrite(37, (address & 2048));
+  digitalWrite(36, (address & 4096));
+  digitalWrite(35, (address & 8192));
+  digitalWrite(34, (address & 16384));
+  digitalWrite(33, (address & 32768));
 
-  delayMicroseconds(1000);
-
-  return (REG_PIOD_PDSR & 0b01111001111);
+  
+  
+  int holder = 0;
+  int value;
+  
+  value = 128 * digitalRead(25);
+  value = value + 64 * digitalRead(26);
+  value = value + 32 * digitalRead(27);
+  value = value + 16 * digitalRead(28);
+  value = value + 8 * digitalRead(29);
+  value = value + 4 * digitalRead(11);
+  value = value + 2 * digitalRead(12);
+  value = value + digitalRead(30);
+  //Serial.print("VALUE: ");
+  //Serial.println(messedData(value));
+  //delay(1000);
+  return messedData(value);
+  
+  //REG_PIOC_ODSR = address;
+  //Serial.print("READING ADDRESS ");
+  //Serial.println(address);
+  //delayMicroseconds(100);
+  //delay(3000);
+  //return (REG_PIOD_PDSR & 0b01111001111);
 }
 
 
 
 // Write a byte of data
 void writeData(const long& address, const int& data) {
-  REG_PIOC_ODSR = address;
+  //REG_PIOC_ODSR = address;
+  //Serial.print("WRITING DATA: ");
+  //Serial.println(data);
+  //delay(1000);
+  //REG_PIOD_ODSR = data;
+    
+  digitalWrite(45, (address & 1)); //A0 = least significant bit
+  digitalWrite(46, (address & 2));
+  digitalWrite(47, (address & 4));
+  digitalWrite(48, (address & 8));
+  digitalWrite(49, (address & 16));
+  digitalWrite(50, (address & 32));
+  digitalWrite(51, (address & 64));
+  digitalWrite(41, (address & 128));
+  digitalWrite(40, (address & 256));
+  digitalWrite(39, (address & 512));
+  digitalWrite(38, (address & 1024));
+  digitalWrite(37, (address & 2048));
+  digitalWrite(36, (address & 4096));
+  digitalWrite(35, (address & 8192));
+  digitalWrite(34, (address & 16384));
+  digitalWrite(33, (address & 32768));
+ 
+ /* 
+  Serial.print("ADDRESS: ");
+  Serial.print((address & 32768) ? 1 : 0);
+  Serial.print((address & 16384) ? 1 : 0);
+  Serial.print((address & 8192) ? 1 : 0);
+  Serial.print((address & 4096) ? 1 : 0);
+  Serial.print((address & 2048) ? 1 : 0);
+  Serial.print((address & 1024) ? 1 : 0);
+  Serial.print((address & 512) ? 1 : 0);
+  Serial.print((address & 256) ? 1 : 0);
+  Serial.print((address & 128) ? 1 : 0);
+  Serial.print((address & 64) ? 1 : 0);
+  Serial.print((address & 32) ? 1 : 0);
+  Serial.print((address & 16) ? 1 : 0);
+  Serial.print((address & 8) ? 1 : 0);
+  Serial.print((address & 4) ? 1 : 0);
+  Serial.print((address & 2) ? 1 : 0);
+  Serial.println((address & 1) ? 1 : 0);
+  delay(2000);
+  */
+  /*
+  Serial.print("WRITTEN DATA: ");
+  Serial.print((data & 512) ? 1 : 0);
+  Serial.print((data & 256) ? 1 : 0);
+  Serial.print((data & 128) ? 1 : 0);
+  Serial.print((data & 64) ? 1 : 0);
+  Serial.print('0');
+  Serial.print('0');
+  Serial.print((data & 8) ? 1 : 0);
+  Serial.print((data & 4) ? 1 : 0);
+  Serial.print((data & 2) ? 1 : 0);
+  Serial.println((data & 1) ? 1 : 0);
+  delay(2000);
+  */
+  //Serial.print("WRITTEN DATA: ");
+  //Serial.println(data);
   
-  REG_PIOD_ODSR = data;
+  digitalWrite(30, data & 1);
+  digitalWrite(12, data & 2);
+  digitalWrite(11, data & 4);
+  digitalWrite(29, data & 8);
+  digitalWrite(28, data & 64);
+  digitalWrite(27, data & 128);
+  digitalWrite(26, data & 256);
+  digitalWrite(25, data & 512);
 
+  
+  
   digitalWrite(CS, LOW);
   digitalWrite(WR, LOW);
   
@@ -235,7 +370,7 @@ void reread(const long& address, const int& times, int (*fread)(const long&)) {
   long resetaddr = incrementAddress(address);
 
   for (i = 0; i < times; i++) {
-    (*fread)(resetaddr);
+    //(*fread)(resetaddr);
     reads[i] = (*fread)(address);
     if (correctData != reads[i]) {
       netFalseReads++;
@@ -243,6 +378,7 @@ void reread(const long& address, const int& times, int (*fread)(const long&)) {
   }
 
   if (VERBOSE) {
+    /*
     Serial.println(" ");
     Serial.println(" ");
     Serial.print("CURRENT MODE: ");
@@ -269,6 +405,7 @@ void reread(const long& address, const int& times, int (*fread)(const long&)) {
     }
     Serial.println();
     Serial.println();
+    */
   }
   else {
     Serial.print("BR ");
@@ -319,7 +456,7 @@ void setCorrectData(const int& addr){
   }
   else if (currentMode == NORMAL) {
     //correctData = correctData ^ 0b1111001111;
-    //correctData = messedData(addr%256);  -- Silly; don't do anything
+    correctData = messedData(addr%256);  //-- Silly; don't do anything
     //correctData = messedData(121);
     //Serial.print("CORRECT DATA: ");
     //Serial.println(correctData);
@@ -369,6 +506,7 @@ void loop() {
 
   for (int pwrc = 0; pwrc < numPowerCycles; pwrc++) {
     digitalWrite(VCC, HIGH);
+    
     for (int rn = 0; rn < numRuns; rn++) { //main loop for the tests
       int addr = 0;
       long addressInt = 0;
@@ -381,14 +519,16 @@ void loop() {
         pinMode(i, OUTPUT);
       }
 
-      //correctData = 0;
+      correctData = 0;
       randomSeed(seed);
-
+/*
       for (addr = 0; addr < NUM_ADDRESSES; addr++) { //write loop
         setCorrectData(addr);
-              
-        writeData(addressInt, correctData);
-        addressInt = incrementAddress(addressInt);
+        //Serial.print("RECEIVED DATA: ");
+        //Serial.println(correctData);
+        writeData(addr, correctData);
+        //writeData(addressInt, correctData);
+        //addressInt = incrementAddress(addressInt);
       }
 
       // Set pins to inputs
@@ -397,25 +537,51 @@ void loop() {
       for (i = 25; i < 31; i++) {
         pinMode(i, INPUT);
       }
-      
+*/      
       addressInt = 0; //reset the address between our run and read cycles back to 0
-      //correctData = 0;
+      correctData = 0;
       randomSeed(seed);
-      
+      int badReads = 0;
       //Bring the necessary pins down for the read cycle
       digitalWrite(CS, LOW);
       digitalWrite(OE, LOW);
+      
       for (addr = 0; addr < NUM_ADDRESSES; addr++) { //read loop
         setCorrectData(addr);
-        //readDataAddr(addressInt);
+        //Serial.print("CORRECT DATA: ");
+          //Serial.println(correctData);
+        //dataInt = readDataAddr(addressInt);
+        digitalWrite(OE, HIGH);
+        digitalWrite(CS, HIGH);
+        digitalWrite(WR, HIGH);
+        pinMode(11, OUTPUT);
+        pinMode(12, OUTPUT);
+        for (i = 25; i < 31; i++) {
+          pinMode(i, OUTPUT);
+        }
+        writeData(10487, correctData);
         
-        dataInt = readDataAddr(addressInt);
+        digitalWrite(CS, LOW);
+        digitalWrite(OE, LOW);
+        pinMode(11, INPUT);
+        pinMode(12, INPUT);
+        for (i = 25; i < 31; i++) {
+          pinMode(i, INPUT);
+        }
+        
+        //readDataAddr(addr);
+        dataInt = readDataAddr(10487);
         //dataInt = readData(addressInt);
-        
+        //Serial.print("TEST: ");
+        //Serial.println(correctData);
         // Print out the address and received data if bad data read
         if (correctData != dataInt) {
-          Serial.print("ADDRESS NUMBER: ");
-          Serial.println(addr);
+          //badReads = badReads + 1;
+          //Serial.print(addr);
+          //Serial.print(": ");
+          Serial.print(dataInt);
+          Serial.print(": ");
+          Serial.println(toBinary(correctData ^ dataInt, 10)) ;
           /*
           if (VERBOSE) {
             Serial.print("\nAddress:\t");
@@ -437,15 +603,19 @@ void loop() {
           }
           */
           // If the read-back data is incorrect reread n times, n = readsAfterFailure
-          reread(addressInt, readsAfterFailure, readDataAddr);
-          delay(1000);
+          //reread(addressInt, readsAfterFailure, readDataAddr);
+          reread(10487, readsAfterFailure, readDataAddr);
+          
+          //delay(1000);
         }
         //else
         //{
-        //     Serial.println(dataInt);
+         // Serial.print("ADDRESS NUMBER: ");
+         // Serial.println(addr);
  
         //}
-        addressInt = incrementAddress(addressInt);
+        addressInt = addressInt + 1;
+        //addressInt = incrementAddress(addressInt);
       }
       
       
@@ -458,6 +628,8 @@ void loop() {
         Serial.print(rn + 1);
         Serial.print('/');
         Serial.println(numRuns);
+        Serial.print("NUMBER OF BAD ADDRESSES: ");
+        Serial.println(badReads);
       }
       else {
         Serial.println("--");

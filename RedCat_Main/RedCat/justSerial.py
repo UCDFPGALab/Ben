@@ -203,8 +203,8 @@ def send_inputs():
 
     
 port = sys.argv[1];
-outputFile = open('goodData.txt', 'a');
-latchFile = open('rates.txt', 'a');
+#outputFile = open('goodData.txt', 'a');
+#latchFile = open('rates.txt', 'a');
 
 
 try:
@@ -214,7 +214,7 @@ except IOError:
   sys.exit();
 
 aFile = open('logFile', 'w')
-inputFile = open('runs.txt', 'r')
+#inputFile = open('runs.txt', 'r')
 
 holder = False
 WIDTH = 4.40
@@ -242,8 +242,9 @@ latches = 0;
 while (line != "$\n"):
     line = ser.readline()
     if len(line) > 0:
-    	sys.stdout.write(line);
-	words = line.split();
+	aFile.write(line);
+    	#sys.stdout.write(line);
+	#words = line.split();
 	#print(words);
 	#print("\n");
 #	if words[0] == "CD":
