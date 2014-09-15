@@ -236,7 +236,7 @@ def is_number(s):
 while True:
 #    sys.stdout.write('READING...\n');
     line = ser.readline()
-    if len(line) > 0 #and is_number(line):
+    if len(line) > 0: #and is_number(line):
     	sys.stdout.write(line);
     	sys.stdout.write('\n\n');
 	outputFile.write(line);

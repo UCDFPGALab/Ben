@@ -22,7 +22,6 @@ typedef enum {ALL0, ALL1, ALTERNATING, NORMAL, RANDOM} mode;
 
 states currentState = NONE;
 mode currentMode = NORMAL;
-
 int currentValue = 0;
 byte output1, output2, output3;
 const char SET_CODES[] = {'a', 'b', 'c', 'd', 'e'};
@@ -457,7 +456,7 @@ void setCorrectData(const int& addr){
   else if (currentMode == NORMAL) {
     //correctData = correctData ^ 0b1111001111;
     //correctData = messedData(addr%256);  //-- Silly; don't do anything
-    correctData = messedData(addr%3);
+    correctData = messedData(addr%256);
     //correctData = messedData(121);
     //Serial.print("CORRECT DATA: ");
     //Serial.println(correctData);
@@ -552,7 +551,8 @@ void loop() {
         //Serial.print("CORRECT DATA: ");
         //Serial.println(correctData);
         //dataInt = readDataAddr(addressInt);
-        addressInt = (addressInt + 1) % 2;
+        addressInt = (addressInt + 1);
+ 
         //correctData = addressInt % 2 == 1 ? 0 : messedData(255);
         //Serial.print("CORRECT DATA: ");
         //Serial.println(correctData);
@@ -567,21 +567,23 @@ void loop() {
         for (i = 25; i < 31; i++) {
           pinMode(i, OUTPUT);
         }
+        
         writeData(addressInt, correctData);
         
         digitalWrite(CS, LOW);
         digitalWrite(OE, LOW);
+        //delay(1000);
         pinMode(11, INPUT);
         pinMode(12, INPUT);
         for (i = 25; i < 31; i++) {
           pinMode(i, INPUT);
         }
-        
         //readDataAddr(addr);
         dataInt = readDataAddr(addressInt);
+        //delayMicroseconds(30);
         //dataInt = readData(addressInt);
         //Serial.print("TEST: ");
-        //Serial.println(correctData);
+        //Serial.println(dataInt);
         // Print out the address and received data if bad data read
         if (correctData != dataInt) {
           //badReads = badReads + 1;
@@ -594,13 +596,6 @@ void loop() {
           Serial.print(dataInt);
           Serial.print("    ");
           Serial.println(toBinary(correctData ^ dataInt, 10)) ;
-          for(int j = 0; j < 10; i++)
-          {
-            digitalWrite(LED, HIGH);
-            delay(100);
-            digitalWrite(LED, LOW);
-            delay(100);
-          }
           /*
           if (VERBOSE) {
             Serial.print("\nAddress:\t");
@@ -623,6 +618,7 @@ void loop() {
           */
           // If the read-back data is incorrect reread n times, n = readsAfterFailure
           //reread(addressInt, readsAfterFailure, readDataAddr);
+          //delay(1000);
           reread(addressInt, readsAfterFailure, readDataAddr);
         }
         //else
